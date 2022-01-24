@@ -79,9 +79,10 @@ class postgresDBClient:
         # Close connection
         conn.close() 
         
+
     def add_users(self, user: User):
         user_tuple = dataclasses.astuple(user)
-
+      
         # Connection establishment
         conn = psycopg2.connect( #repetition included for testing purposes
             database='users',
@@ -95,7 +96,9 @@ class postgresDBClient:
 
         # Insert user details 
         insert_user = """ INSERT INTO userinfo (NAME, EMAIL_ADD, WALLET_ID) VALUES (%s,%s,%s)"""
+
         cursor.execute(insert_user, user_tuple)
+
 
         # Check insertion
         count = cursor.rowcount
@@ -111,6 +114,7 @@ class postgresDBClient:
     def add_transactions(self, trxn: Transaction):
         trxn_tuple = dataclasses.astuple(trxn)
         
+
         # Connection establishment
         conn = psycopg2.connect( #repetition included for testing purposes
             database='transactions',
@@ -124,7 +128,9 @@ class postgresDBClient:
 
         # Insert transaction details 
         insert_transaction = """ INSERT INTO transaction (PAYER_ID, PAYEE_ID, COIN, AMOUNT, GAS_SPEND) VALUES (%s,%s,%s,%s,%s)"""
+
         cursor.execute(insert_transaction, trxn_tuple)
+
 
         # Check insertion
         count = cursor.rowcount
