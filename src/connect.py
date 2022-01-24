@@ -79,9 +79,13 @@ class postgresDBClient:
         # Close connection
         conn.close() 
         
+<<<<<<< HEAD
     def add_users(self, user: User):
         user_tuple = dataclasses.astuple(user)
 
+=======
+    def add_users(name, email_add, wallet_id):
+>>>>>>> Added functions for postgresDBClient
         # Connection establishment
         conn = psycopg2.connect( #repetition included for testing purposes
             database='users',
@@ -95,7 +99,11 @@ class postgresDBClient:
 
         # Insert user details 
         insert_user = """ INSERT INTO userinfo (NAME, EMAIL_ADD, WALLET_ID) VALUES (%s,%s,%s)"""
+<<<<<<< HEAD
         cursor.execute(insert_user, user_tuple)
+=======
+        cursor.execute(insert_user, (name, email_add, wallet_id))
+>>>>>>> Added functions for postgresDBClient
 
         # Check insertion
         count = cursor.rowcount
@@ -108,9 +116,13 @@ class postgresDBClient:
         conn.close()     
 
         
+<<<<<<< HEAD
     def add_transactions(self, trxn: Transaction):
         trxn_tuple = dataclasses.astuple(trxn)
         
+=======
+    def add_transactions(payer_id, payee_id, coin, amount, gas_spend):
+>>>>>>> Added functions for postgresDBClient
         # Connection establishment
         conn = psycopg2.connect( #repetition included for testing purposes
             database='transactions',
@@ -124,7 +136,11 @@ class postgresDBClient:
 
         # Insert transaction details 
         insert_transaction = """ INSERT INTO transaction (PAYER_ID, PAYEE_ID, COIN, AMOUNT, GAS_SPEND) VALUES (%s,%s,%s,%s,%s)"""
+<<<<<<< HEAD
         cursor.execute(insert_transaction, trxn_tuple)
+=======
+        cursor.execute(insert_transaction, (payer_id, payee_id, coin, amount, gas_spend))
+>>>>>>> Added functions for postgresDBClient
 
         # Check insertion
         count = cursor.rowcount
