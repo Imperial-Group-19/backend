@@ -12,7 +12,7 @@ import ujson
 from autobahn.asyncio.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from autobahn.websocket.protocol import ConnectionRequest, WebSocketProtocol
 
-from messaging_protocol import Subscription, Message
+from message_protocol import Subscription, Message
 
 
 class WebSocketServer(WebSocketServerFactory):
