@@ -119,7 +119,7 @@ if __name__ == '__main__':
 
     async def dummy_function():
         while True:
-            subscription = Subscription(type="Kamil")
+            subscription = Subscription(id=1, jsonrpc="2.0", method="subscribe", params=["one", "two", "three"])
             ws_server.send_msg(subscription)
             await asyncio.sleep(1)
 
