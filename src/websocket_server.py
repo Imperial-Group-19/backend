@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 
 # server
 # https://github.com/crossbario/autobahn-python/blob/master/examples/asyncio/websocket/echo/server.py
