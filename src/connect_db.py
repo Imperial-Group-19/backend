@@ -3,9 +3,10 @@ import psycopg2
 from dbinfo import User, Transaction
 
 class postgresDBClient:
-    def __init__(self, db_type, conn, cursor):
+    def __init__(self, db_type):
         # Connection establishment
-        self.conn = conn
+        # self.conn = conn
+        self.db_type = db_type
         conn = psycopg2.connect(
             database=db_type,
             user='postgres',
@@ -17,7 +18,7 @@ class postgresDBClient:
         conn.autocommit = True
 
         # Creating a cursor object
-        self.cursor = cursor
+        # self.cursor = cursor
         cursor= conn.cursor()
 
         # Print when connection is successful
@@ -42,16 +43,12 @@ class postgresDBClient:
         # Print when connection is successful
         print("Database has been connected successfully !!");
 
-
-
     def close_connection(self): 
         # Closing the connection
         self.cursor.close()
         self.conn.close()
 
     def get_users(self):
-        self.db_type = 'users'
-    
         # Query
         self.cursor.execute("SELECT name, email_add, wallet_id FROM userinfo ORDER BY name")
         rows = self.cursor.fetchall()
@@ -104,3 +101,6 @@ class postgresDBClient:
         # Commit changes
         self.conn.commit()
 
+if __name__ == "__main__":
+    db_user = postgresDBClient('users')
+    db_transaction = postgresDBClient('transactions')
