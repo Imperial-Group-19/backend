@@ -12,7 +12,7 @@ import ujson
 from autobahn.asyncio.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from autobahn.websocket.protocol import ConnectionRequest, WebSocketProtocol
 
-from message_protocol import Subscription, Message
+from message_protocol import Subscription, MessageBase
 
 
 class WebSocketServer(WebSocketServerFactory):
@@ -86,7 +86,7 @@ class WebSocketServer(WebSocketServerFactory):
             if server_protocol in sub_clients:
                 sub_clients.remove(server_protocol)
 
-    def send_msg(self, msg: Message):
+    def send_msg(self, msg: MessageBase):
         try:
             msg_dict = dataclasses.asdict(msg)
             bytes_msg = ujson.dumps(msg_dict).encode('utf-8')
