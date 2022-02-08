@@ -1,7 +1,7 @@
 from typing import List
 import dataclasses
 import psycopg2
-from dbinfo import Store, User, Transaction
+from db_objects import Store, User, Transaction, Product
 
 class postgresDBClient:
     def __init__(self, db_type):
@@ -80,11 +80,21 @@ class postgresDBClient:
         # Query
         self.cursor.execute("SELECT id, title, description FROM stores ORDER BY id")
         rows = self.cursor.fetchall()
-        print("The number of transactions: ", self.cursor.rowcount)
+        print("The number of stores: ", self.cursor.rowcount)
         
         stores = {} #use hash as dict
 
         return stores
+
+    def get_product(self) -> List[Product]:
+        # Query
+        self.cursor.execute("SELECT product_id, store_id, title, description, price, features FROM products ORDER BY id")
+        rows = self.cursor.fetchall()
+        print("The number of products: ", self.cursor.rowcount)
+        
+        products = {} #use store hash and product hash as dict
+
+        return products
         
 
     def add_users(self, user: User):
