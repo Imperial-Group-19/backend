@@ -1,7 +1,5 @@
 from dataclasses import dataclass
-from turtle import st
 from typing import List
-from unicodedata import name
 
 
 @dataclass(init=True, repr=True, frozen=True)
@@ -13,6 +11,7 @@ class User:
     def __str__(self):
         return f"{self.name}, {self.email_add}, {self.wallet_id}"
 
+
 @dataclass(init=True, repr=True, frozen=True)
 class Transaction:
     payer_id: str 
@@ -20,6 +19,7 @@ class Transaction:
     coin: str 
     amount: float 
     gas_spend: float
+
 
 @dataclass(init=True, repr=True, frozen=True)
 class Store:
@@ -36,6 +36,7 @@ class Store:
     def __hash__(self) -> int:
         return hash(self.id)
 
+
 @dataclass(init=True, repr=True, frozen=True)
 class Product:
     product_id: str
@@ -43,7 +44,7 @@ class Product:
     title: str
     description: str
     price: int
-    feature: List[str]
+    features: List[str]
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Store):
@@ -53,5 +54,3 @@ class Product:
 
     def __hash__(self) -> int:
         return hash(self.product_id) ^ hash(self.store_id)
-
-

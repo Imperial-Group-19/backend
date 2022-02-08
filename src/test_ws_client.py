@@ -6,6 +6,9 @@ import asyncio
 from autobahn.asyncio.websocket import WebSocketClientProtocol, \
     WebSocketClientFactory
 
+from message_protocol import Subscription, MessageBase, SubscriptionType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, SnapshotType, UpdateType
+from message_conversion import MessageConverter
+
 
 class MyClientProtocol(WebSocketClientProtocol):
 
@@ -24,8 +27,9 @@ class MyClientProtocol(WebSocketClientProtocol):
             self.sendMessage(b"\x00\x01\x03\x04", isBinary=True)
             self.factory.loop.call_later(1, hello)
 
-        # start sending messages every second ..
-        hello()
+        sub_msg = Subscription(id=0, jsonrpc="2.0", method="subscribe", params=[SubscriptionType.products.value])
+        bytes_msg = MessageConverter.serialise_message(sub_msg)
+        self.sendMessage(payload=bytes_msg, isBinary=True)
 
     def onMessage(self, payload, isBinary):
         if isBinary:

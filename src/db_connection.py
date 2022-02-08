@@ -1,7 +1,7 @@
 from typing import List
 import dataclasses
 import psycopg2
-from dbinfo import User, Transaction
+from db_objects import User, Transaction
 
 class postgresDBClient:
     def __init__(self, db_type):

@@ -12,8 +12,66 @@ import ujson
 from autobahn.asyncio.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from autobahn.websocket.protocol import ConnectionRequest, WebSocketProtocol
 
-from message_protocol import Subscription, MessageBase, SubscriptionType, ErrorMessage, ErrorType, ResponseMessage
+from message_protocol import Subscription, MessageBase, SubscriptionType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, SnapshotType, UpdateType
 from message_conversion import MessageConverter
+from db_objects import Store, Product
+
+
+example_store = Store(
+    id="hey",
+    title="hey sup",
+    description="describe hey sup"
+)
+
+
+products = [
+    Product(
+        product_id="C++",
+        store_id="hey",
+        title="C++ course",
+        description="Try out our original course in C++ and impress your interviewers.",
+        price=35000,
+        features=[
+            "Full algorithms course in C++",
+            "Pointers Cheat Sheet",
+            "Memory Management Tips"
+        ]
+    ),
+    Product(
+        product_id="Java",
+        store_id="hey",
+        title="Java course",
+        description="Try out our updated course in Java and impress your interviewers.",
+        price=25000,
+        features=[
+            "Full algorithms course in Java",
+            "OODP Cheat Sheet",
+            "Design Convention Tips"
+        ]
+    ),
+    Product(
+        product_id="Python",
+        store_id="hey",
+        title="Python course",
+        description="Try out our newest course in Python and impress your interviewers.",
+        price=45000,
+        features=[
+            "Full algorithms course in Python",
+            "Data Structures Cheat Sheet",
+            "List comprehension Tips"
+        ]
+    )
+]
+
+
+current_stores = {
+    example_store: example_store
+}
+
+
+current_products = {}
+for prod in products:
+    current_products[prod] = prod
 
 
 class WebSocketServer(WebSocketServerFactory):
@@ -34,6 +92,7 @@ class WebSocketServer(WebSocketServerFactory):
                 self.factory.logging.warning(f"Binary message received from: {self.__request.peer}: msg: {payload.decode('utf8')}")
 
             # handle msgs here - read json/binaries + give callbacks
+            self.factory.process_msg(payload, self)
 
         def onClose(self, was_clean: bool, code: int, reason: str):
             self.factory.logging.warning(f"Client disconnecting: {self.__request.peer}: {was_clean=}, {code=}, {reason=}")
@@ -110,13 +169,13 @@ class WebSocketServer(WebSocketServerFactory):
                     )
                     return
 
-            for subscription in msg_received.params:
-                enum_sub = SubscriptionType[subscription]
-                self.__add_subscriber(enum_sub, subscriber)
-
             response = ResponseMessage(id=msg_received.id, jsonrpc=msg_received.jsonrpc, result=True)
             bytes_msg = self.__message_converter.serialise_message(response)
             subscriber.send_msg(bytes_msg)
+
+            for subscription in msg_received.params:
+                enum_sub = SubscriptionType[subscription]
+                self.__add_subscriber(enum_sub, subscriber)
 
         else:
             error_msg = f"What you sent is not yet supported..."
@@ -145,6 +204,17 @@ class WebSocketServer(WebSocketServerFactory):
 
     def __add_subscriber(self, sub_type: SubscriptionType, server_protocol):
         self.__subscribed_clients[sub_type].add(server_protocol)
+        snapshot_type = SnapshotType[sub_type.value]
+        if snapshot_type == SnapshotType.stores:
+            params = [item.__dict__ for item in current_stores.values()]
+        elif snapshot_type == SnapshotType.products:
+            params = [item.__dict__ for item in current_products.values()]
+        else:
+            raise Exception("Unrecognised sub snapshot")
+
+        snapshot_msg = ParamsMessage(id=0, jsonrpc="2.0", method=snapshot_type.value, params=params)
+        bytes_msg = self.__message_converter.serialise_message(snapshot_msg)
+        server_protocol.send_msg(bytes_msg)
 
     def __remove_subscriber(self, server_protocol):
         for subscriber_set in self.__subscribed_clients.values():
@@ -170,9 +240,12 @@ if __name__ == '__main__':
     ws_server = WebSocketServer(port=args.port, logging=logging)
 
     async def dummy_function():
+        counter = 1
         while True:
-            subscription = Subscription(id=1, jsonrpc="2.0", method="subscribe", params=["one", "two", "three"])
+            subscription = ParamsMessage(id=counter, jsonrpc="2.0", method=UpdateType.products.value,
+                                         params=[item.__dict__ for item in current_products.values()])
             ws_server.send_msg(subscription)
+            counter += 1
             await asyncio.sleep(1)
 
     loop.create_task(dummy_function())

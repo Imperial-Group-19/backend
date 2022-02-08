@@ -8,6 +8,16 @@ class SubscriptionType(Enum):
     products = "products"
 
 
+class SnapshotType(Enum):
+    stores   = "storesSnapshot"
+    products = "productsSnapshot"
+
+
+class UpdateType(Enum):
+    stores   = "storesUpdate"
+    products = "productsUpdate"
+
+
 @dataclass(init=True, repr=True, frozen=True)
 class ErrorType:
     code: int
@@ -24,7 +34,7 @@ class MessageBase:
 
 
 @dataclass(init=True, repr=True)
-class RequestMessage(MessageBase):
+class ParamsMessage(MessageBase):
     method: str
     params: List[Any]
 
@@ -51,7 +61,7 @@ class ErrorMessage(MessageBase):
 
 
 @dataclass(init=True, repr=True)
-class Subscription(RequestMessage):
+class Subscription(ParamsMessage):
     params: List[str]
     method = "subscribe"
 

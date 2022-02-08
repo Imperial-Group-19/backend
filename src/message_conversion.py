@@ -10,7 +10,6 @@ class MessageConverter:
     @staticmethod
     def serialise_message(msg_obj: MessageBase) -> bytes:
         msg_dict = msg_obj.get_as_dict()
-        print(msg_dict)
         return ujson.dumps(obj=msg_dict, escape_forward_slashes=False).encode("utf-8")
 
     def deserialise_message(self, data: bytes) -> MessageBase:
