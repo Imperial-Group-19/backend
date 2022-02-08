@@ -152,7 +152,7 @@ if __name__ == "__main__":
     for txn in transactions:
         print(txn)
     
-    new_txn = User("John Smith", "JC@ic.ac.uk", "1EXAMPLE2Polygon3MATIC456")
+    new_txn = Transaction("1EXAMPLE2Polygon3MATIC456", "2STORE3money4MATIC567", ["C++ course"], 120000)
     db_transaction.add_transactions(new_txn)
     
     # db_product_store = postgresDBClient('')
