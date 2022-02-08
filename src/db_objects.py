@@ -6,19 +6,21 @@ from typing import List
 class User:
     name: str 
     email_add: str 
-    wallet_id: str
+    wallet_add: str
 
     def __str__(self):
-        return f"{self.name}, {self.email_add}, {self.wallet_id}"
+        return f"{self.name}, {self.email_add}, {self.wallet_add}"
 
 
 @dataclass(init=True, repr=True, frozen=True)
 class Transaction:
-    payer_id: str 
-    payee_id: str 
-    coin: str 
-    amount: float 
-    gas_spend: float
+    wallet_add: str 
+    store_add: str 
+    product: List[str] 
+    time_stamp: int
+
+    def __str__(self):
+        return f"{self.wallet_address}, {self.store_address}, {self.product}, {self.time_stamp}"
 
 
 @dataclass(init=True, repr=True, frozen=True)

@@ -1,7 +1,7 @@
 from typing import List
 import dataclasses
 import psycopg2
-from db_objects import User, Transaction
+from dbinfo import Store, User, Transaction
 
 class postgresDBClient:
     def __init__(self, db_type):
@@ -53,7 +53,7 @@ class postgresDBClient:
     # product dictionary based on store hash 
     def get_users(self) -> List[User]:
         # Query
-        self.cursor.execute("SELECT name, email_add, wallet_id FROM userinfo ORDER BY name")
+        self.cursor.execute("SELECT name, email_add, wallet_add FROM userinfo ORDER BY name")
         rows = self.cursor.fetchall()
         print("The number of users: ", self.cursor.rowcount)
 
@@ -64,22 +64,35 @@ class postgresDBClient:
         return users
 
 
-    def get_transactions(self):
+    def get_transactions(self) -> List[Transaction]:
         # Query
-        self.cursor.execute("SELECT payer_id, payee_id, coin, amount, gas_spend FROM transaction ORDER BY payer_id")
+        self.cursor.execute("SELECT wallet_add, store_add, product, timestamp FROM transaction ORDER BY wallet_add")
         rows = self.cursor.fetchall()
         print("The number of transactions: ", self.cursor.rowcount)
         
+        transactions = []
         for row in rows:
-            print(row)
+            transactions.append(Transaction(*row))
+
+        return transactions
+
+    def get_store(self) -> List[Store]:
+        # Query
+        self.cursor.execute("SELECT id, title, description FROM stores ORDER BY id")
+        rows = self.cursor.fetchall()
+        print("The number of transactions: ", self.cursor.rowcount)
+        
+        stores = {} #use hash as dict
+
+        return stores
         
 
     def add_users(self, user: User):
         user_tuple = dataclasses.astuple(user)
 
         # Insert user details 
-        insert_user = """ INSERT INTO userinfo (NAME, EMAIL_ADD, WALLET_ID) VALUES (%s,%s,%s)"""
-        # insert_user_str = f"INSERT INTO userinfo (NAME, EMAIL_ADD, WALLET_ID) VALUES ({user})"
+        insert_user = """ INSERT INTO userinfo (NAME, EMAIL_ADD, WALLET_ADD) VALUES (%s,%s,%s)"""
+        # insert_user_str = f"INSERT INTO userinfo (NAME, EMAIL_ADD, WALLET_ADD) VALUES ({user})"
 
         self.cursor.execute(insert_user, user_tuple)
 
@@ -96,7 +109,7 @@ class postgresDBClient:
         trxn_tuple = dataclasses.astuple(trxn)
 
         # Insert transaction details 
-        insert_transaction = """ INSERT INTO transaction (PAYER_ID, PAYEE_ID, COIN, AMOUNT, GAS_SPEND) VALUES (%s,%s,%s,%s,%s)"""
+        insert_transaction = """ INSERT INTO transaction (WALLET_ADD, STORE_ADD, PRODUCT, TIMESTAMP) VALUES (%s,%s,%s,%s)"""
 
         self.cursor.execute(insert_transaction, trxn_tuple)
 
@@ -115,13 +128,21 @@ class postgresDBClient:
 if __name__ == "__main__":
     db_user = postgresDBClient('users')
     db_transaction = postgresDBClient('transactions')
+    db_product_store = postgresDBClient('product_store')
 
     users = db_user.get_users()
     for us in users:
         print(us)
         # db_user.add_users(us)
 
+    new_user = User("John Smith", "JC@ic.ac.uk", "1EXAMPLE2Polygon3MATIC456")
+    db_user.add_users(new_user)
     
+    transactions = db_transaction.get_transactions()
+    for txn in transactions:
+        print(txn)
     
+    new_txn = User("John Smith", "JC@ic.ac.uk", "1EXAMPLE2Polygon3MATIC456")
+    db_transaction.add_transactions(new_txn)
     
     # db_product_store = postgresDBClient('')
