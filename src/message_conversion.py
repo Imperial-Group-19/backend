@@ -2,7 +2,7 @@ import ujson
 from message_protocol import MessageBase, Subscription, ResponseMessage, ErrorMessage
 
 
-class MsgConverter:
+class MessageConverter:
     msg_mappings = {
         Subscription.method: Subscription
     }
@@ -35,7 +35,7 @@ class MsgConverter:
 
 if __name__ == "__main__":
     from message_protocol import ErrorType
-    msg_converter = MsgConverter()
+    msg_converter = MessageConverter()
 
     def test_1():
         subscribe = Subscription(id=2, jsonrpc="2.0", method="subscribe", params=["kamil"])

@@ -1,5 +1,11 @@
 from dataclasses import dataclass, field
 from typing import Any, List
+from enum import Enum
+
+
+class SubscriptionType(Enum):
+    stores   = "stores"
+    products = "products"
 
 
 @dataclass(init=True, repr=True, frozen=True)

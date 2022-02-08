@@ -12,13 +12,13 @@ import ujson
 from autobahn.asyncio.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from autobahn.websocket.protocol import ConnectionRequest, WebSocketProtocol
 
-from message_protocol import Subscription, MessageBase
+from message_protocol import Subscription, MessageBase, SubscriptionType, ErrorMessage, ErrorType, ResponseMessage
+from message_conversion import MessageConverter
 
 
 class WebSocketServer(WebSocketServerFactory):
 
     class ServerProtocol(WebSocketServerProtocol):
-
         def onConnect(self, request: ConnectionRequest):
             self.__request = request
             self.factory.logging.warning(f"Client connecting: {self.__request.peer}")
@@ -62,9 +62,14 @@ class WebSocketServer(WebSocketServerFactory):
         self.ServerProtocol.factory = self
         self.protocol = self.ServerProtocol
 
+        self.__message_converter = MessageConverter()
+        self.__allowed_subscriptions = [enum_pos.value for enum_pos in list(SubscriptionType)]
+
         # sets of clients and subscribers here
         self.__connected_clients = set()
-        self.__subscribed_clients: Dict[Subscription, set] = {}
+        self.__subscribed_clients: Dict[SubscriptionType, set] = {}
+        for enum_pos in list(SubscriptionType):
+            self.__subscribed_clients[enum_pos] = set()
 
         # add server to asyncio + run until complete
         self.server = self.event_loop.create_server(protocol_factory=self,
@@ -82,9 +87,48 @@ class WebSocketServer(WebSocketServerFactory):
         if server_protocol in self.__connected_clients:
             self.__connected_clients.remove(server_protocol)
 
-        for sub_clients in self.__subscribed_clients.values():
-            if server_protocol in sub_clients:
-                sub_clients.remove(server_protocol)
+        self.__remove_subscriber(server_protocol)
+
+    def process_msg(self, payload: Union[str, bytes], subscriber):
+        if isinstance(payload, str):
+            payload = payload.encode("utf-8")
+
+        msg_received = self.__message_converter.deserialise_message(payload)
+
+        if isinstance(msg_received, Subscription):
+            for subscription in msg_received.params:
+                if subscription not in self.__allowed_subscriptions:
+                    # send error message + disconnect client
+                    error_msg = f"Following subscription param not supported: {subscription}"
+                    response = ErrorMessage(id=msg_received.id, jsonrpc=msg_received.jsonrpc, error=ErrorType(code=1, message=error_msg))
+                    bytes_msg = self.__message_converter.serialise_message(response)
+                    subscriber.send_msg(bytes_msg)
+
+                    subscriber.close_connection(
+                        WebSocketServerProtocol.CLOSE_STATUS_CODE_INVALID_PAYLOAD,
+                        error_msg
+                    )
+                    return
+
+            for subscription in msg_received.params:
+                enum_sub = SubscriptionType[subscription]
+                self.__add_subscriber(enum_sub, subscriber)
+
+            response = ResponseMessage(id=msg_received.id, jsonrpc=msg_received.jsonrpc, result=True)
+            bytes_msg = self.__message_converter.serialise_message(response)
+            subscriber.send_msg(bytes_msg)
+
+        else:
+            error_msg = f"What you sent is not yet supported..."
+            response = ErrorMessage(id=msg_received.id, jsonrpc=msg_received.jsonrpc,
+                                    error=ErrorType(code=1, message=error_msg))
+            bytes_msg = self.__message_converter.serialise_message(response)
+            subscriber.send_msg(bytes_msg)
+
+            subscriber.close_connection(
+                WebSocketServerProtocol.CLOSE_STATUS_CODE_INVALID_PAYLOAD,
+                error_msg
+            )
 
     def send_msg(self, msg: MessageBase):
         try:
@@ -98,6 +142,14 @@ class WebSocketServer(WebSocketServerFactory):
     def close_server(self):
         if self.__async_server_future:
             self.__async_server_future.close()
+
+    def __add_subscriber(self, sub_type: SubscriptionType, server_protocol):
+        self.__subscribed_clients[sub_type].add(server_protocol)
+
+    def __remove_subscriber(self, server_protocol):
+        for subscriber_set in self.__subscribed_clients.values():
+            if server_protocol in subscriber_set:
+                subscriber_set.remove(server_protocol)
 
 
 if __name__ == '__main__':
