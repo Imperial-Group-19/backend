@@ -3,6 +3,16 @@ import dataclasses
 import psycopg2
 from db_objects import Store, User, Transaction, Product
 
+# from sshtunnel import SSHTunnelForwarder
+
+# PORT = 5432
+# server = SSHTunnelForwarder(('35.195.58.180', 4000),
+#          ssh_username= USERNAME,
+#          ssh_password= PASSWORD,
+#          remote_bind_address=('localhost', PORT),
+#          local_bind_address=('localhost', PORT))
+# server.start()
+
 class postgresDBClient:
     def __init__(self, db_type):
         # Connection establishment
@@ -13,6 +23,8 @@ class postgresDBClient:
             password = 'crypto',
             host='localhost', 
             port= '5432'
+            # host= server.local_bind_host, 
+            # port= server.local_bind_port,
         )
         
         self.conn.autocommit = True
@@ -195,7 +207,7 @@ if __name__ == "__main__":
     print(db_product_store.stores_data)
     print(db_product_store.products_data)
     
-    # new_user = User("John Smith", "JC@ic.ac.uk", "1EXAMPLE2Polygon3MATIC456")
+    # new_user = User("John Smith", "JS@ic.ac.uk", "1EXAMPLE2Polygon3MATIC456")
     # db_user.add_users(new_user)
 
     # ERROR IN PRODUCT DATA TYPE
