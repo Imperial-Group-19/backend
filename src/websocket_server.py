@@ -23,7 +23,7 @@ example_store = Store(
     id="hey",
     title="hey sup",
     description="describe hey sup",
-    wallet_address="0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6"
+    store_address = "0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6"
 )
 
 
@@ -135,6 +135,9 @@ class WebSocketServer(WebSocketServerFactory):
 
         self.__products_counter = 0
         self.__stores_counter   = 0
+
+        # add db connection
+        self.db_connect = postgresDBClient('product_store')
 
         # add server to asyncio + run until complete
         self.server = self.event_loop.create_server(protocol_factory=self,
@@ -290,10 +293,12 @@ class WebSocketServer(WebSocketServerFactory):
         self.__subscribed_clients[sub_type].add(server_protocol)
         if sub_type == DBType.stores:
             msg_counter = self.__stores_counter
-            params = [DBType.stores.value, [item.__dict__ for item in current_stores.values()]]
+            params = self.db_connect.get_store()
+            params = [item.__dict__ for item in params]
         elif sub_type == DBType.products:
             msg_counter = self.__products_counter
-            params = [DBType.products.value, [item.__dict__ for item in current_products.values()]]
+            params = self.db_connect.get_product()
+            params = [item.__dict__ for item in params]
         else:
             raise Exception("Unrecognised sub snapshot")
 
