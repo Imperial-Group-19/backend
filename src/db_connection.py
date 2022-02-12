@@ -31,6 +31,8 @@ class postgresDBClient:
             password = 'crypto',
             host='127.0.0.1', 
             port= '5432'
+            # host= server.local_bind_host, 
+            # port= server.local_bind_port,
         )
         
         self.conn.autocommit = True
