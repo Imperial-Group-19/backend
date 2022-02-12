@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 import dataclasses
 import psycopg2
 from db_objects import Store, User, Transaction, Product
@@ -23,6 +23,18 @@ class postgresDBClient:
         # Print when connection is successful
         print("Database has been connected successfully !!");
 
+        # Read data at initialisation
+        if(db_type == 'users'):
+            self.users_data = {}
+            self.users_data = self.get_users()
+        elif(db_type == 'transactions'):
+            self.transactions_data = {}
+            self.transactions_data = self.get_transactions()
+        elif(db_type == 'product_store'):
+            self.stores_data = {}
+            self.products_data = {}
+            self.stores_data = self.get_store()
+            self.products_data = self.get_product()
 
     def connect(self): #testing function
         # Connection establishment
@@ -49,50 +61,60 @@ class postgresDBClient:
 
 
     # read at initialisation and store data in cache - hash to identify each table 
-    # store dictionary
-    # product dictionary based on store hash 
-    def get_users(self) -> List[User]:
+    # store data as dictionary
+ 
+    def get_users(self) -> Dict[User, User]:
         # Query
         self.cursor.execute("SELECT name, email_add, wallet_add FROM userinfo ORDER BY name")
         rows = self.cursor.fetchall()
         print("The number of users: ", self.cursor.rowcount)
 
-        users = []
+        users = {}
         for row in rows:
-            users.append(User(*row))
+            user = User(*row)
+            users[user] = user
 
         return users
 
 
-    def get_transactions(self) -> List[Transaction]:
+    def get_transactions(self) -> Dict[Transaction, Transaction]:
         # Query
-        self.cursor.execute("SELECT wallet_add, store_add, product, timestamp FROM transaction ORDER BY wallet_add")
+        self.cursor.execute("SELECT wallet_add, store_add, product, time_stamp FROM transactions ORDER BY wallet_add")
         rows = self.cursor.fetchall()
         print("The number of transactions: ", self.cursor.rowcount)
         
-        transactions = []
+        transactions = {}
         for row in rows:
-            transactions.append(Transaction(*row))
+            txn = Transaction(*row)
+            transactions[txn] = txn
 
         return transactions
-
-    def get_store(self) -> List[Store]:
+    
+    def get_store(self) -> Dict[Store, Store]:
         # Query
-        self.cursor.execute("SELECT id, title, description FROM stores ORDER BY id")
+        self.cursor.execute("SELECT store_id, title, description, store_add FROM stores ORDER BY store_id")
         rows = self.cursor.fetchall()
         print("The number of stores: ", self.cursor.rowcount)
         
-        stores = {} #use hash as dict
+        stores = {} #use hash as dict key
+        
+        for row in rows:
+            store = Store(*row)
+            stores[store] = store
 
         return stores
 
-    def get_product(self) -> List[Product]:
+    def get_product(self) -> Dict[Product, Product]:
         # Query
-        self.cursor.execute("SELECT product_id, store_id, title, description, price, features FROM products ORDER BY id")
+        self.cursor.execute("SELECT product_id, store_id, title, description, price, features FROM products ORDER BY product_id")
         rows = self.cursor.fetchall()
         print("The number of products: ", self.cursor.rowcount)
         
-        products = {} #use store hash and product hash as dict
+        products = {} #use store hash and product hash as dict key
+
+        for row in rows:
+            product = Product(*row)
+            products[product] = product
 
         return products
         
@@ -119,40 +141,87 @@ class postgresDBClient:
         trxn_tuple = dataclasses.astuple(trxn)
 
         # Insert transaction details 
-        insert_transaction = """ INSERT INTO transaction (WALLET_ADD, STORE_ADD, PRODUCT, TIMESTAMP) VALUES (%s,%s,%s,%s)"""
+        insert_transaction = """ INSERT INTO transactions (WALLET_ADD, STORE_ADD, PRODUCT, TIME_STAMP) VALUES (%s,%s,%s,%s)"""
 
         self.cursor.execute(insert_transaction, trxn_tuple)
 
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record inserted successfully into transaction table")
+        print(count, "Record inserted successfully into transactions table")
 
         # Commit changes
         self.conn.commit()
 
 
-#get from store by store_id
-#get from product by store_id then product_id
+    def add_stores(self, st: Store):
+            st_tuple = dataclasses.astuple(st)
+
+            # Insert store details 
+            insert_store = """ INSERT INTO stores (STORE_ID, TITLE, DESCRIPTION, STORE_ADD) VALUES (%s,%s,%s,%s)"""
+
+            self.cursor.execute(insert_store, st_tuple)
+
+            # Check insertion
+            count = self.cursor.rowcount
+            print(count, "Record inserted successfully into stores table")
+
+            # Commit changes
+            self.conn.commit()
+
+    def add_products(self, prdt: Product):
+        prdt_tuple = dataclasses.astuple(prdt)
+
+        # Insert product details 
+        insert_product = """ INSERT INTO products (PRODUCT_ID, STORE_ID, TITLE, DESCRIPTION, PRICE, FEATURES) VALUES (%s,%s,%s,%s,%s,%s)"""
+
+        self.cursor.execute(insert_product, prdt_tuple)
+
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into products table")
+
+        # Commit changes
+        self.conn.commit()
 
 if __name__ == "__main__":
     db_user = postgresDBClient('users')
     db_transaction = postgresDBClient('transactions')
     db_product_store = postgresDBClient('product_store')
+    
+    print(db_user.users_data)
+    print(db_transaction.transactions_data)
+    print(db_product_store.stores_data)
+    print(db_product_store.products_data)
+    
+    # new_user = User("John Smith", "JC@ic.ac.uk", "1EXAMPLE2Polygon3MATIC456")
+    # db_user.add_users(new_user)
 
-    users = db_user.get_users()
-    for us in users:
-        print(us)
-        # db_user.add_users(us)
+    # ERROR IN PRODUCT DATA TYPE
+    # new_txn = Transaction("1EXAMPLE2Polygon3MATIC456", "0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6", new_product, 120000)
+    # db_transaction.add_transactions(new_txn)
+    
+    # new_store = Store("super-algorithms", "Super Algorithms Inc.", 
+    #                   "We help you prepare for Tech Interviews", 
+    #                   "0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6")
+    # db_product_store.add_stores(new_store)
+    # db_product_store.stores_data = db_product_store.stores_data.get_store()
+    # print(db_product_store.stores_data)
 
-    new_user = User("John Smith", "JC@ic.ac.uk", "1EXAMPLE2Polygon3MATIC456")
-    db_user.add_users(new_user)
+
+    # new_product = Product("C++", "super-algorithms", "C++ course", 
+    #                     "Try out our original course in C++ and impress your interviewers.", 10,
+    #                     ["Full algorithms course in C++",
+    #                     "Pointers Cheat Sheet",
+    #                     "Memory Management Tips"])
+    # db_product_store.add_products(new_product)
+    # db_product_store.products_data = db_product_store.products_data.get_product()
+    # print(db_product_store.products_data)
+
+
+
+
+
     
-    transactions = db_transaction.get_transactions()
-    for txn in transactions:
-        print(txn)
     
-    new_txn = Transaction("1EXAMPLE2Polygon3MATIC456", "2STORE3money4MATIC567", ["C++ course"], 120000)
-    db_transaction.add_transactions(new_txn)
-    
-    # db_product_store = postgresDBClient('')
