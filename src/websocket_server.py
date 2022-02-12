@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 
 # server
 # https://github.com/crossbario/autobahn-python/blob/master/examples/asyncio/websocket/echo/server.py
@@ -12,13 +12,71 @@ import ujson
 from autobahn.asyncio.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from autobahn.websocket.protocol import ConnectionRequest, WebSocketProtocol
 
-from messaging_protocol import Subscription, Message
+from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, WSMsgType, Insert
+from message_conversion import MessageConverter
+from db_objects import Store, Product
+
+
+example_store = Store(
+    id="hey",
+    title="hey sup",
+    description="describe hey sup"
+)
+
+
+products = [
+    Product(
+        product_id="C++",
+        store_id="hey",
+        title="C++ course",
+        description="Try out our original course in C++ and impress your interviewers.",
+        price=35000,
+        features=[
+            "Full algorithms course in C++",
+            "Pointers Cheat Sheet",
+            "Memory Management Tips"
+        ]
+    ),
+    Product(
+        product_id="Java",
+        store_id="hey",
+        title="Java course",
+        description="Try out our updated course in Java and impress your interviewers.",
+        price=25000,
+        features=[
+            "Full algorithms course in Java",
+            "OODP Cheat Sheet",
+            "Design Convention Tips"
+        ]
+    ),
+    Product(
+        product_id="Python",
+        store_id="hey",
+        title="Python course",
+        description="Try out our newest course in Python and impress your interviewers.",
+        price=45000,
+        features=[
+            "Full algorithms course in Python",
+            "Data Structures Cheat Sheet",
+            "List comprehension Tips"
+        ]
+    )
+]
+
+
+current_stores = {
+    example_store: example_store
+}
+
+
+current_products = {}
+for prod in products:
+    current_products[prod] = prod
 
 
 class WebSocketServer(WebSocketServerFactory):
 
     class ServerProtocol(WebSocketServerProtocol):
-
         def onConnect(self, request: ConnectionRequest):
             self.__request = request
             self.factory.logging.warning(f"Client connecting: {self.__request.peer}")
@@ -34,10 +92,11 @@ class WebSocketServer(WebSocketServerFactory):
                 self.factory.logging.warning(f"Binary message received from: {self.__request.peer}: msg: {payload.decode('utf8')}")
 
             # handle msgs here - read json/binaries + give callbacks
+            self.factory.process_msg(payload, self)
 
         def onClose(self, was_clean: bool, code: int, reason: str):
             self.factory.logging.warning(f"Client disconnecting: {self.__request.peer}: {was_clean=}, {code=}, {reason=}")
-            self.factory.remove_remote_client(self.remote_address)
+            self.factory.remove_remote_client(self)
 
         def send_msg(self, data: bytes):
             self.factory.logging.warning(f"Sending bytes: {data}")
@@ -62,9 +121,17 @@ class WebSocketServer(WebSocketServerFactory):
         self.ServerProtocol.factory = self
         self.protocol = self.ServerProtocol
 
+        self.__message_converter = MessageConverter()
+        self.__allowed_subscriptions = [enum_pos.value for enum_pos in list(DBType)]
+
         # sets of clients and subscribers here
         self.__connected_clients = set()
-        self.__subscribed_clients: Dict[Subscription, set] = {}
+        self.__subscribed_clients: Dict[DBType, set] = {}
+        for enum_pos in list(DBType):
+            self.__subscribed_clients[enum_pos] = set()
+
+        self.__products_counter = 0
+        self.__stores_counter   = 0
 
         # add server to asyncio + run until complete
         self.server = self.event_loop.create_server(protocol_factory=self,
@@ -82,11 +149,95 @@ class WebSocketServer(WebSocketServerFactory):
         if server_protocol in self.__connected_clients:
             self.__connected_clients.remove(server_protocol)
 
-        for sub_clients in self.__subscribed_clients.values():
-            if server_protocol in sub_clients:
-                sub_clients.remove(server_protocol)
+        self.__remove_subscriber(server_protocol)
 
-    def send_msg(self, msg: Message):
+    def process_msg(self, payload: Union[str, bytes], subscriber):
+        if isinstance(payload, str):
+            payload = payload.encode("utf-8")
+
+        try:
+            msg_received = self.__message_converter.deserialise_message(payload)
+        except Exception as e:
+            error_msg = f"Received unsupported message: {payload}: Exception: {e}"
+            self.logging.warning(error_msg)
+            self.send_error_msg(server_protocol=subscriber, msg_id=-1,
+                                error_type=ErrorType(code=99, message="Invalid json."))
+            return
+
+        if isinstance(msg_received, Subscription):
+            for subscription in msg_received.params:
+                if subscription not in self.__allowed_subscriptions:
+                    # send error message + disconnect client
+                    error_msg = f"Following subscription param not supported: {subscription}"
+                    self.send_error_msg(server_protocol=subscriber, msg_id=-1,
+                                        error_type=ErrorType(code=99, message=error_msg))
+                    subscriber.close_connection(
+                        WebSocketServerProtocol.CLOSE_STATUS_CODE_INVALID_PAYLOAD,
+                        error_msg
+                    )
+                    return
+
+            self.send_response_msg(server_protocol=subscriber, msg_id=msg_received.id, result=True)
+
+            for subscription in msg_received.params:
+                enum_sub = DBType[subscription]
+                self.__add_subscriber(enum_sub, subscriber)
+
+        elif isinstance(msg_received, Insert):
+            error_msg = ""
+            if len(msg_received.params) == 2:
+                if isinstance(msg_received.params[1], dict):
+                    if msg_received.params[0] == DBType.products.value:
+                        try:
+                            product = Product(**msg_received.params[1])
+                            inserted = self.insert_product(product)
+                            self.send_response_msg(server_protocol=subscriber, msg_id=msg_received.id, result=inserted)
+                            if inserted:
+                                self.send_product_update(product)
+                            return
+                        except Exception as e:
+                            error_msg = "Wrong keys/value types for product item"
+
+                    elif msg_received.params[0] == DBType.stores.value:
+                        try:
+                            store = Store(**msg_received.params[1])
+                            inserted = self.insert_store(store)
+                            self.send_response_msg(server_protocol=subscriber, msg_id=msg_received.id, result=inserted)
+                            if inserted:
+                                self.send_store_update(store)
+                            return
+                        except Exception as e:
+                            error_msg = "Wrong keys/value types for store item"
+
+                    else:
+                        error_msg = "No such db object!"
+
+            else:
+                error_msg = "Insert params have wrong format. Expecting [str, dict]"
+
+            self.send_error_msg(server_protocol=subscriber, msg_id=msg_received.id,
+                                error_type=ErrorType(code=2, message=error_msg))
+
+        else:
+            error_msg = f"What you sent is not yet supported..."
+            self.send_error_msg(server_protocol=subscriber, msg_id=msg_received.id,
+                                error_type=ErrorType(code=1, message=error_msg))
+            subscriber.close_connection(
+                WebSocketServerProtocol.CLOSE_STATUS_CODE_INVALID_PAYLOAD,
+                error_msg
+            )
+
+    def send_error_msg(self, server_protocol, msg_id: int, error_type: ErrorType):
+        response = ErrorMessage(id=msg_id, jsonrpc="2.0", error=error_type)
+        bytes_msg = self.__message_converter.serialise_message(response)
+        server_protocol.send_msg(bytes_msg)
+
+    def send_response_msg(self, server_protocol, msg_id: int, result: bool):
+        response = ResponseMessage(id=msg_id, jsonrpc="2.0", result=result)
+        bytes_msg = self.__message_converter.serialise_message(response)
+        server_protocol.send_msg(bytes_msg)
+
+    def send_msg(self, msg: MessageBase):
         try:
             msg_dict = dataclasses.asdict(msg)
             bytes_msg = ujson.dumps(msg_dict).encode('utf-8')
@@ -98,6 +249,52 @@ class WebSocketServer(WebSocketServerFactory):
     def close_server(self):
         if self.__async_server_future:
             self.__async_server_future.close()
+
+    def insert_product(self, product: Product) -> bool:
+        # add support for db here
+        current_products[product] = product
+        return True
+
+    def insert_store(self, store: Store) -> bool:
+        # add support for db here
+        current_stores[store] = store
+        return True
+
+    def send_product_update(self, product: Product):
+        self.__products_counter += 1
+        snapshot_msg = ParamsMessage(id=self.__products_counter, jsonrpc="2.0", method=WSMsgType.update.value,
+                                     params=[DBType.products.value, [product.__dict__]])
+        bytes_msg = self.__message_converter.serialise_message(snapshot_msg)
+        for subscriber in self.__subscribed_clients[DBType.products]:
+            subscriber.send_msg(bytes_msg)
+
+    def send_store_update(self, store: Store):
+        self.__stores_counter += 1
+        snapshot_msg = ParamsMessage(id=self.__stores_counter, jsonrpc="2.0", method=WSMsgType.update.value,
+                                     params=[DBType.stores.value, [store.__dict__]])
+        bytes_msg = self.__message_converter.serialise_message(snapshot_msg)
+        for subscriber in self.__subscribed_clients[DBType.stores]:
+            subscriber.send_msg(bytes_msg)
+
+    def __add_subscriber(self, sub_type: DBType, server_protocol):
+        self.__subscribed_clients[sub_type].add(server_protocol)
+        if sub_type == DBType.stores:
+            msg_counter = self.__stores_counter
+            params = [DBType.stores.value, [item.__dict__ for item in current_stores.values()]]
+        elif sub_type == DBType.products:
+            msg_counter = self.__products_counter
+            params = [DBType.products.value, [item.__dict__ for item in current_products.values()]]
+        else:
+            raise Exception("Unrecognised sub snapshot")
+
+        snapshot_msg = ParamsMessage(id=msg_counter, jsonrpc="2.0", method=WSMsgType.snapshot.value, params=params)
+        bytes_msg = self.__message_converter.serialise_message(snapshot_msg)
+        server_protocol.send_msg(bytes_msg)
+
+    def __remove_subscriber(self, server_protocol):
+        for subscriber_set in self.__subscribed_clients.values():
+            if server_protocol in subscriber_set:
+                subscriber_set.remove(server_protocol)
 
 
 if __name__ == '__main__':
@@ -118,9 +315,12 @@ if __name__ == '__main__':
     ws_server = WebSocketServer(port=args.port, logging=logging)
 
     async def dummy_function():
+        counter = 1
         while True:
-            subscription = Subscription(type="Kamil")
+            subscription = ParamsMessage(id=counter, jsonrpc="2.0", method=WSMsgType.update.value,
+                                         params=[DBType.products.value, [item.__dict__ for item in current_products.values()]])
             ws_server.send_msg(subscription)
+            counter += 1
             await asyncio.sleep(1)
 
     loop.create_task(dummy_function())
