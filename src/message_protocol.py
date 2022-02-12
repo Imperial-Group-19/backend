@@ -1,21 +1,18 @@
-from dataclasses import dataclass, field
-from typing import Any, List
+from dataclasses import dataclass
 from enum import Enum
+from typing import Any, List
 
 
-class SubscriptionType(Enum):
+class DBType(Enum):
     stores   = "stores"
     products = "products"
 
 
-class SnapshotType(Enum):
-    stores   = "storesSnapshot"
-    products = "productsSnapshot"
-
-
-class UpdateType(Enum):
-    stores   = "storesUpdate"
-    products = "productsUpdate"
+class WSMsgType(Enum):
+    subscribe    = "subscribe"
+    snapshot     = "snapshot"
+    update       = "update"
+    insert       = "insert"
 
 
 @dataclass(init=True, repr=True, frozen=True)
@@ -61,11 +58,17 @@ class ErrorMessage(MessageBase):
 
 
 @dataclass(init=True, repr=True)
+class ParamsResponse(ResponseMessage):
+    result: bool
+
+
+@dataclass(init=True, repr=True)
 class Subscription(ParamsMessage):
     params: List[str]
     method = "subscribe"
 
 
 @dataclass(init=True, repr=True)
-class SubscriptionResponse(ResponseMessage):
-    result: bool
+class Insert(ParamsMessage):
+    params: List[str]
+    method = "insert"

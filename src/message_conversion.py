@@ -1,10 +1,13 @@
 import ujson
-from message_protocol import MessageBase, Subscription, ResponseMessage, ErrorMessage
+from message_protocol import MessageBase, Subscription, ResponseMessage, ErrorMessage, Insert, WSMsgType, ParamsMessage
 
 
 class MessageConverter:
     msg_mappings = {
-        Subscription.method: Subscription
+        WSMsgType.subscribe.value: Subscription,
+        WSMsgType.insert.value: Insert,
+        WSMsgType.snapshot.value: ParamsMessage,
+        WSMsgType.update.value: ParamsMessage
     }
 
     @staticmethod
