@@ -292,6 +292,7 @@ class WebSocketServer(WebSocketServerFactory):
         if sub_type == DBType.stores:
             msg_counter = self.__stores_counter
 <<<<<<< HEAD
+<<<<<<< HEAD
             params = self.db_connect.get_stores()
             params = [item.__dict__ for item in params]
         elif sub_type == DBType.products:
@@ -304,6 +305,13 @@ class WebSocketServer(WebSocketServerFactory):
             msg_counter = self.__products_counter
             params = self.db_connect.get_product()
 >>>>>>> Minor edits to test db connection on VM
+=======
+            params = self.db_connect.get_stores()
+            params = [item.__dict__ for item in params]
+        elif sub_type == DBType.products:
+            msg_counter = self.__products_counter
+            params = self.db_connect.get_products()
+>>>>>>> Updated with sshtunnelforwarder and minor updates to postgres commands
             params = [item.__dict__ for item in params]
         else:
             raise Exception("Unrecognised sub snapshot")
