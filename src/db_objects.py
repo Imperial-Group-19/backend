@@ -28,7 +28,6 @@ class Store:
     id: str
     title: str
     description: str
-    store_add: str
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Store):
