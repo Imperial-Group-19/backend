@@ -3,15 +3,23 @@ import dataclasses
 import psycopg2
 from db_objects import Store, User, Transaction, Product
 
-# from sshtunnel import SSHTunnelForwarder
+#to shift to websocket server
+from sshtunnel import SSHTunnelForwarder
+from getpass import getpass
 
-# PORT = 5432
-# server = SSHTunnelForwarder(('35.195.58.180', 4000),
-#          ssh_username= USERNAME,
-#          ssh_password= PASSWORD,
-#          remote_bind_address=('localhost', PORT),
-#          local_bind_address=('localhost', PORT))
-# server.start()
+username = getpass(prompt = 'Enter SSH username: ')
+pkey = getpass(prompt = 'Enter SSH private key: ')
+pw = getpass(prompt = 'Enter SSH private key password: ')
+
+PORT = 5432
+server = SSHTunnelForwarder(('35.195.58.180', 22),
+         ssh_username= username,
+         ssh_pkey = pkey, 
+         ssh_private_key_password= pw,
+         remote_bind_address=('localhost', PORT),
+         local_bind_address=('localhost', PORT),
+         allow_agent=False)
+server.start()
 
 class postgresDBClient:
     def __init__(self, db_type):
@@ -21,10 +29,8 @@ class postgresDBClient:
             database=db_type,
             user='postgres',
             password = 'crypto',
-            host='localhost', 
+            host='127.0.0.1', 
             port= '5432'
-            # host= server.local_bind_host, 
-            # port= server.local_bind_port,
         )
         
         self.conn.autocommit = True
@@ -45,8 +51,8 @@ class postgresDBClient:
         elif(db_type == 'product_store'):
             self.stores_data = {}
             self.products_data = {}
-            self.stores_data = self.get_store()
-            self.products_data = self.get_product()
+            self.stores_data = self.get_stores()
+            self.products_data = self.get_products()
 
     def connect(self): #testing function
         # Connection establishment
@@ -72,12 +78,11 @@ class postgresDBClient:
         self.conn.close()
 
 
-    # read at initialisation and store data in cache - hash to identify each table 
-    # store data as dictionary
+    # DB read functions
  
     def get_users(self) -> Dict[User, User]:
         # Query
-        self.cursor.execute("SELECT name, email_add, wallet_add FROM userinfo ORDER BY name")
+        self.cursor.execute("SELECT name, email_add, wallet_add FROM users ORDER BY name")
         rows = self.cursor.fetchall()
         print("The number of users: ", self.cursor.rowcount)
 
@@ -89,22 +94,22 @@ class postgresDBClient:
         return users
 
 
-    def get_transactions(self) -> Dict[Transaction, Transaction]:
-        # Query
-        self.cursor.execute("SELECT wallet_add, store_add, product, time_stamp FROM transactions ORDER BY wallet_add")
-        rows = self.cursor.fetchall()
-        print("The number of transactions: ", self.cursor.rowcount)
+    # def get_transactions(self) -> Dict[Transaction, Transaction]:
+    #     # Query
+    #     self.cursor.execute("SELECT wallet_add, store_add, product, time_stamp FROM transactions ORDER BY wallet_add")
+    #     rows = self.cursor.fetchall()
+    #     print("The number of transactions: ", self.cursor.rowcount)
         
-        transactions = {}
-        for row in rows:
-            txn = Transaction(*row)
-            transactions[txn] = txn
+    #     transactions = {}
+    #     for row in rows:
+    #         txn = Transaction(*row)
+    #         transactions[txn] = txn
 
-        return transactions
+    #     return transactions
     
-    def get_store(self) -> Dict[Store, Store]:
+    def get_stores(self) -> Dict[Store, Store]:
         # Query
-        self.cursor.execute("SELECT store_id, title, description, store_add FROM stores ORDER BY store_id")
+        self.cursor.execute("SELECT id, title, description, store_add FROM stores ORDER BY id")
         rows = self.cursor.fetchall()
         print("The number of stores: ", self.cursor.rowcount)
         
@@ -116,7 +121,7 @@ class postgresDBClient:
 
         return stores
 
-    def get_product(self) -> Dict[Product, Product]:
+    def get_products(self) -> Dict[Product, Product]:
         # Query
         self.cursor.execute("SELECT product_id, store_id, title, description, price, features FROM products ORDER BY product_id")
         rows = self.cursor.fetchall()
@@ -129,13 +134,14 @@ class postgresDBClient:
             products[product] = product
 
         return products
-        
+
+    # DB write functions    
 
     def add_users(self, user: User):
         user_tuple = dataclasses.astuple(user)
 
         # Insert user details 
-        insert_user = """ INSERT INTO userinfo (NAME, EMAIL_ADD, WALLET_ADD) VALUES (%s,%s,%s)"""
+        insert_user = """ INSERT INTO users (NAME, EMAIL_ADD, WALLET_ADD) VALUES (%s,%s,%s)"""
         # insert_user_str = f"INSERT INTO userinfo (NAME, EMAIL_ADD, WALLET_ADD) VALUES ({user})"
 
         self.cursor.execute(insert_user, user_tuple)
@@ -143,7 +149,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record inserted successfully into userinfo table")
+        print(count, "Record inserted successfully into users table")
 
         # Commit changes
         self.conn.commit()
@@ -170,7 +176,7 @@ class postgresDBClient:
             st_tuple = dataclasses.astuple(st)
 
             # Insert store details 
-            insert_store = """ INSERT INTO stores (STORE_ID, TITLE, DESCRIPTION, STORE_ADD) VALUES (%s,%s,%s,%s)"""
+            insert_store = """ INSERT INTO stores (ID, TITLE, DESCRIPTION, STORE_ADD) VALUES (%s,%s,%s,%s)"""
 
             self.cursor.execute(insert_store, st_tuple)
 
@@ -199,11 +205,11 @@ class postgresDBClient:
 
 if __name__ == "__main__":
     db_user = postgresDBClient('users')
-    db_transaction = postgresDBClient('transactions')
+    # db_transaction = postgresDBClient('transactions')
     db_product_store = postgresDBClient('product_store')
     
     print(db_user.users_data)
-    print(db_transaction.transactions_data)
+    # print(db_transaction.transactions_data)
     print(db_product_store.stores_data)
     print(db_product_store.products_data)
     
@@ -218,17 +224,17 @@ if __name__ == "__main__":
     #                   "We help you prepare for Tech Interviews", 
     #                   "0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6")
     # db_product_store.add_stores(new_store)
-    # db_product_store.stores_data = db_product_store.stores_data.get_store()
+    # db_product_store.stores_data = db_product_store.get_stores()
     # print(db_product_store.stores_data)
 
 
     # new_product = Product("C++", "super-algorithms", "C++ course", 
-    #                     "Try out our original course in C++ and impress your interviewers.", 10,
+    #                     "Try out our original course in C++ and impress your interviewers.", 35000,
     #                     ["Full algorithms course in C++",
     #                     "Pointers Cheat Sheet",
     #                     "Memory Management Tips"])
     # db_product_store.add_products(new_product)
-    # db_product_store.products_data = db_product_store.products_data.get_product()
+    # db_product_store.products_data = db_product_store.get_products()
     # print(db_product_store.products_data)
 
 
