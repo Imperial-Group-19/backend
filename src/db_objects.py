@@ -46,7 +46,7 @@ class Product:
     store_id: str
     title: str
     description: str
-    price: int
+    price: int 
     features: List[str]
 
     def __eq__(self, __o: object) -> bool:
