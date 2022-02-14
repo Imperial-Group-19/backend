@@ -18,62 +18,62 @@ from db_objects import Store, Product
 from db_connection import postgresDBClient
 
 
-example_store = Store(
-    id="hey",
-    title="hey sup",
-    description="describe hey sup",
-    store_add = "0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6"
-)
+# example_store = Store(
+#     id="hey",
+#     title="hey sup",
+#     description="describe hey sup",
+#     store_add = "0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6"
+# )
 
 
-products = [
-    Product(
-        product_id="C++",
-        store_id="hey",
-        title="C++ course",
-        description="Try out our original course in C++ and impress your interviewers.",
-        price=35000,
-        features=[
-            "Full algorithms course in C++",
-            "Pointers Cheat Sheet",
-            "Memory Management Tips"
-        ]
-    ),
-    Product(
-        product_id="Java",
-        store_id="hey",
-        title="Java course",
-        description="Try out our updated course in Java and impress your interviewers.",
-        price=25000,
-        features=[
-            "Full algorithms course in Java",
-            "OODP Cheat Sheet",
-            "Design Convention Tips"
-        ]
-    ),
-    Product(
-        product_id="Python",
-        store_id="hey",
-        title="Python course",
-        description="Try out our newest course in Python and impress your interviewers.",
-        price=45000,
-        features=[
-            "Full algorithms course in Python",
-            "Data Structures Cheat Sheet",
-            "List comprehension Tips"
-        ]
-    )
-]
+# products = [
+#     Product(
+#         product_id="C++",
+#         store_id="hey",
+#         title="C++ course",
+#         description="Try out our original course in C++ and impress your interviewers.",
+#         price=35000,
+#         features=[
+#             "Full algorithms course in C++",
+#             "Pointers Cheat Sheet",
+#             "Memory Management Tips"
+#         ]
+#     ),
+#     Product(
+#         product_id="Java",
+#         store_id="hey",
+#         title="Java course",
+#         description="Try out our updated course in Java and impress your interviewers.",
+#         price=25000,
+#         features=[
+#             "Full algorithms course in Java",
+#             "OODP Cheat Sheet",
+#             "Design Convention Tips"
+#         ]
+#     ),
+#     Product(
+#         product_id="Python",
+#         store_id="hey",
+#         title="Python course",
+#         description="Try out our newest course in Python and impress your interviewers.",
+#         price=45000,
+#         features=[
+#             "Full algorithms course in Python",
+#             "Data Structures Cheat Sheet",
+#             "List comprehension Tips"
+#         ]
+#     )
+# ]
 
 
-current_stores = {
-    example_store: example_store
-}
+# current_stores = {
+#     example_store: example_store
+# }
 
 
-current_products = {}
-for prod in products:
-    current_products[prod] = prod
+# current_products = {}
+# for prod in products:
+#     current_products[prod] = prod
 
 
 class WebSocketServer(WebSocketServerFactory):
@@ -285,11 +285,11 @@ class WebSocketServer(WebSocketServerFactory):
         self.__subscribed_clients[sub_type].add(server_protocol)
         if sub_type == DBType.stores:
             msg_counter = self.__stores_counter
-            params = self.db_connect.get_store()
+            params = self.db_connect.get_stores()
             params = [item.__dict__ for item in params]
         elif sub_type == DBType.products:
             msg_counter = self.__products_counter
-            params = self.db_connect.get_product()
+            params = self.db_connect.get_products()
             params = [item.__dict__ for item in params]
         else:
             raise Exception("Unrecognised sub snapshot")
