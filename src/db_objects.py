@@ -5,22 +5,22 @@ from typing import List
 @dataclass(init=True, repr=True, frozen=True)
 class User:
     name: str 
-    email_add: str 
-    wallet_add: str
+    email_address: str 
+    wallet_address: str
 
     def __str__(self):
-        return f"{self.name}, {self.email_add}, {self.wallet_add}"
+        return f"{self.name}, {self.email_address}, {self.wallet_address}"
 
 
 @dataclass(init=True, repr=True, frozen=True)
 class Transaction:
-    wallet_add: str 
-    store_add: str 
-    product: List[str] 
-    time_stamp: int
+    wallet_address: str 
+    store_address: str 
+    product_id: str 
+    timestamp: int
 
     def __str__(self):
-        return f"{self.wallet_address}, {self.store_address}, {self.product}, {self.time_stamp}"
+        return f"{self.wallet_address}, {self.store_address}, {self.product}, {self.timestamp}"
 
 
 @dataclass(init=True, repr=True, frozen=True)
@@ -28,7 +28,7 @@ class Store:
     id: str
     title: str
     description: str
-    store_add: str
+    store_address: str
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Store):

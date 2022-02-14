@@ -82,7 +82,7 @@ class postgresDBClient:
  
     def get_users(self) -> Dict[User, User]:
         # Query
-        self.cursor.execute("SELECT name, email_add, wallet_add FROM users ORDER BY name")
+        self.cursor.execute("SELECT name, email_address, wallet_address FROM users ORDER BY name")
         rows = self.cursor.fetchall()
         print("The number of users: ", self.cursor.rowcount)
 
@@ -96,7 +96,7 @@ class postgresDBClient:
 
     # def get_transactions(self) -> Dict[Transaction, Transaction]:
     #     # Query
-    #     self.cursor.execute("SELECT wallet_add, store_add, product, time_stamp FROM transactions ORDER BY wallet_add")
+    #     self.cursor.execute("SELECT wallet_address, store_address, product, timestamp FROM transactions ORDER BY wallet_address")
     #     rows = self.cursor.fetchall()
     #     print("The number of transactions: ", self.cursor.rowcount)
         
@@ -109,7 +109,7 @@ class postgresDBClient:
     
     def get_stores(self) -> Dict[Store, Store]:
         # Query
-        self.cursor.execute("SELECT id, title, description, store_add FROM stores ORDER BY id")
+        self.cursor.execute("SELECT id, title, description, store_address FROM stores ORDER BY id")
         rows = self.cursor.fetchall()
         print("The number of stores: ", self.cursor.rowcount)
         
@@ -141,8 +141,8 @@ class postgresDBClient:
         user_tuple = dataclasses.astuple(user)
 
         # Insert user details 
-        insert_user = """ INSERT INTO users (NAME, EMAIL_ADD, WALLET_ADD) VALUES (%s,%s,%s)"""
-        # insert_user_str = f"INSERT INTO userinfo (NAME, EMAIL_ADD, WALLET_ADD) VALUES ({user})"
+        insert_user = """ INSERT INTO users (NAME, email_address, wallet_address) VALUES (%s,%s,%s)"""
+        # insert_user_str = f"INSERT INTO userinfo (NAME, email_address, wallet_address) VALUES ({user})"
 
         self.cursor.execute(insert_user, user_tuple)
 
@@ -159,7 +159,7 @@ class postgresDBClient:
         trxn_tuple = dataclasses.astuple(trxn)
 
         # Insert transaction details 
-        insert_transaction = """ INSERT INTO transactions (WALLET_ADD, STORE_ADD, PRODUCT, TIME_STAMP) VALUES (%s,%s,%s,%s)"""
+        insert_transaction = """ INSERT INTO transactions (wallet_address, store_address, PRODUCT, timestamp) VALUES (%s,%s,%s,%s)"""
 
         self.cursor.execute(insert_transaction, trxn_tuple)
 
@@ -176,7 +176,7 @@ class postgresDBClient:
             st_tuple = dataclasses.astuple(st)
 
             # Insert store details 
-            insert_store = """ INSERT INTO stores (ID, TITLE, DESCRIPTION, STORE_ADD) VALUES (%s,%s,%s,%s)"""
+            insert_store = """ INSERT INTO stores (ID, TITLE, DESCRIPTION, store_address) VALUES (%s,%s,%s,%s)"""
 
             self.cursor.execute(insert_store, st_tuple)
 
@@ -228,11 +228,11 @@ if __name__ == "__main__":
     # print(db_product_store.stores_data)
 
 
-    # new_product = Product("C++", "super-algorithms", "C++ course", 
-    #                     "Try out our original course in C++ and impress your interviewers.", 35000,
-    #                     ["Full algorithms course in C++",
-    #                     "Pointers Cheat Sheet",
-    #                     "Memory Management Tips"])
+    # new_product = Product("Java", "super-algorithms", "Java course", 
+    #                     "Try out our updated course in Java and impress your interviewers.", 25000,
+    #                     ["Full algorithms course in Java",
+    #                     "OODP Cheat Sheet",
+    #                     "Design Convention Tips"])
     # db_product_store.add_products(new_product)
     # db_product_store.products_data = db_product_store.get_products()
     # print(db_product_store.products_data)
