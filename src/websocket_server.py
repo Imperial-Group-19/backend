@@ -20,7 +20,8 @@ from db_objects import Store, Product
 example_store = Store(
     id="hey",
     title="hey sup",
-    description="describe hey sup"
+    description="describe hey sup",
+    wallet_address="0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6"
 )
 
 

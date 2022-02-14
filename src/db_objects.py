@@ -28,6 +28,7 @@ class Store:
     id: str
     title: str
     description: str
+    wallet_address: str
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Store):
@@ -45,7 +46,7 @@ class Product:
     store_id: str
     title: str
     description: str
-    price: int #should this be float or int?
+    price: int
     features: List[str]
 
     def __eq__(self, __o: object) -> bool:
