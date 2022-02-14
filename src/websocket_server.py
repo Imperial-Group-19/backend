@@ -315,16 +315,16 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     ws_server = WebSocketServer(port=args.port, logging=logging)
 
-    async def dummy_function():
-        counter = 1
-        while True:
-            subscription = ParamsMessage(id=counter, jsonrpc="2.0", method=WSMsgType.update.value,
-                                         params=[DBType.products.value, [item.__dict__ for item in current_products.values()]])
-            ws_server.send_msg(subscription)
-            counter += 1
-            await asyncio.sleep(1)
-
-    loop.create_task(dummy_function())
+    # async def dummy_function():
+    #     counter = 1
+    #     while True:
+    #         subscription = ParamsMessage(id=counter, jsonrpc="2.0", method=WSMsgType.update.value,
+    #                                      params=[DBType.products.value, [item.__dict__ for item in current_products.values()]])
+    #         ws_server.send_msg(subscription)
+    #         counter += 1
+    #         await asyncio.sleep(1)
+    #
+    # loop.create_task(dummy_function())
 
     try:
         loop.run_forever()
