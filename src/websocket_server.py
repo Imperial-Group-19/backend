@@ -22,7 +22,7 @@ from db_connection import postgresDBClient
 #     id="hey",
 #     title="hey sup",
 #     description="describe hey sup",
-#     store_add = "0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6"
+#     store_address = "0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6"
 # )
 
 
@@ -66,14 +66,12 @@ from db_connection import postgresDBClient
 # ]
 
 
-# current_stores = {
-#     example_store: example_store
-# }
+current_stores = {}
+current_stores = self.db_connect.get_stores()
 
 
-# current_products = {}
-# for prod in products:
-#     current_products[prod] = prod
+current_products = {}
+current_products = self.db_connect.get_products()
 
 
 class WebSocketServer(WebSocketServerFactory):
