@@ -68,12 +68,8 @@ from polygon_node_connection import PolygonNodeClient
 
 
 current_stores = {}
-current_stores = self.db_connect.get_stores()
-
 
 current_products = {}
-current_products = self.db_connect.get_products()
-
 
 class WebSocketServer(WebSocketServerFactory):
 
@@ -208,7 +204,7 @@ class WebSocketServer(WebSocketServerFactory):
                             return
                         except Exception as e:
                             error_msg = "Wrong keys/value types for product item"
-
+,
                     elif msg_received.params[0] == DBType.stores.value:
                         try:
                             store = Store(**msg_received.params[1])
@@ -263,11 +259,13 @@ class WebSocketServer(WebSocketServerFactory):
 
     def insert_product(self, product: Product) -> bool:
         # add support for db here
+        current_products = self.db_connect.get_products()
         current_products[product] = product
         return True
 
     def insert_store(self, store: Store) -> bool:
         # add support for db here
+        current_stores = self.db_connect.get_stores()
         current_stores[store] = store
         return True
 

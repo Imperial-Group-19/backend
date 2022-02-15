@@ -20,7 +20,7 @@ class Transaction:
     timestamp: int
 
     def __str__(self):
-        return f"{self.wallet_address}, {self.store_address}, {self.product}, {self.timestamp}"
+        return f"{self.wallet_address}, {self.store_address}, {self.product_id}, {self.timestamp}"
 
 
 @dataclass(init=True, repr=True, frozen=True)
