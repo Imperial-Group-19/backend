@@ -6,15 +6,17 @@ import argparse
 import asyncio
 import dataclasses
 from logging import Logger
-from typing import Union, Dict
+from typing import Union, Dict, List
 
 import ujson
 from autobahn.asyncio.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from autobahn.websocket.protocol import ConnectionRequest, WebSocketProtocol
 
-from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, WSMsgType, Insert
+from db_objects import Store, Product, FunnelEvent, ALLOWED_EVENTS, FunnelContractEvent
 from message_conversion import MessageConverter
-from db_objects import Store, Product
+from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, \
+    WSMsgType, Insert
+from polygon_node_connection import PolygonNodeClient
 
 
 example_store = Store(
@@ -138,6 +140,13 @@ class WebSocketServer(WebSocketServerFactory):
         self.server = self.event_loop.create_server(protocol_factory=self,
                                                     host="", port=self.port)
         self.__async_server_future = self.event_loop.run_until_complete(self.server)
+        self.__polygon_node_connection = PolygonNodeClient(event_loop=self.event_loop, logger=self.logging,
+                                                           https_url="https://rpc-mumbai.maticvigil.com",
+                                                           contract_address="0xaE7b635D1C9832Ee9c4ede4C5b261c61b79BD728",
+                                                           contract_abi_file="funnel_abi.json",
+                                                           start_block=24934959)
+
+        self.__polygon_node_connection.register_event_callback("ws_server", self.process_contract_events)
 
     def add_remote_client(self, server_protocol):
         peer_name = server_protocol.get_peer_name()
@@ -297,6 +306,17 @@ class WebSocketServer(WebSocketServerFactory):
             if server_protocol in subscriber_set:
                 subscriber_set.remove(server_protocol)
 
+    def process_contract_events(self, list_events: List[FunnelContractEvent]):
+        for event in list_events:
+            if event.event in ALLOWED_EVENTS:
+                cls_obj = ALLOWED_EVENTS[event.event]
+                cls_obj_data = event.__dict__
+                cls_obj_data.pop("event")
+                extra_data = cls_obj_data.pop("event_data")
+                cls_obj_data.update(extra_data)
+                init_obj = cls_obj(**cls_obj_data)
+                self.logging.warning(init_obj)
+
 
 if __name__ == '__main__':
     import logging
@@ -314,17 +334,6 @@ if __name__ == '__main__':
 
     loop = asyncio.get_event_loop()
     ws_server = WebSocketServer(port=args.port, logging=logging)
-
-    # async def dummy_function():
-    #     counter = 1
-    #     while True:
-    #         subscription = ParamsMessage(id=counter, jsonrpc="2.0", method=WSMsgType.update.value,
-    #                                      params=[DBType.products.value, [item.__dict__ for item in current_products.values()]])
-    #         ws_server.send_msg(subscription)
-    #         counter += 1
-    #         await asyncio.sleep(1)
-    #
-    # loop.create_task(dummy_function())
 
     try:
         loop.run_forever()

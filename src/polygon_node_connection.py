@@ -1,121 +1,209 @@
-import web3.eth
-from web3 import Web3
+import asyncio
+import json
+import operator
+from logging import Logger
+from typing import List
+from hexbytes import HexBytes
 
-# class nodeClient:
-#     def __init__(self):
-#         # metamask url
-#         web3 = Web3(Web3.WebsocketProvider("wss://rpc-mumbai.maticvigil.com/ws"))
-#
-#         print(web3.isConnected())
-#         # print(web3.eth.blockNumber)
-#
-#     """
-#     def close_conenction(self):
-#
-#
-#     """
-#
-#     def read_from_contract(self, ):
-        
-        
-if __name__ == "__main__":
-    import json
-    from web3.contract import Contract
-    from web3 import Web3, HTTPProvider
-    w3 = Web3(provider=HTTPProvider(endpoint_uri="https://rpc-mumbai.maticvigil.com"))
-    str_address = "0xD1A831348B69a37c75540ac3af58b6E37224fe64"
-    address = Web3.toChecksumAddress(str_address)
+from eth_typing.evm import ChecksumAddress
+from web3 import Web3, HTTPProvider
+from web3._utils.filters import construct_event_filter_params
+from web3._utils.rpc_abi import RPC
+from web3.contract import ContractEvent, Contract
+from eth_abi import decode_abi
+from db_objects import FunnelContractEvent
+from https_connection import HTTPSConnection
 
-    with open("funnel_abi.json", "r") as f:
-        abi_file = json.load(f)
 
-    contract: Contract = w3.eth.contract(address=address, abi=abi_file["abi"])
-    for event in contract.events:
-        print(event)
+class PolygonNodeClient:
+    def __init__(self, event_loop: asyncio.AbstractEventLoop, logger: Logger, https_url: str,
+                 contract_address: str, contract_abi_file: str, start_block: int):
+        self.__event_loop = event_loop
+        self.__https_url: str = https_url
+        self.__start_block: int = start_block
 
-    for func in contract.functions:
-        print(func)
+        self.__web3: Web3 = Web3(provider=HTTPProvider(endpoint_uri=https_url))
+        self.__contract_address: ChecksumAddress = Web3.toChecksumAddress(contract_address)
+        self.__abi: dict = {}
+        self.__logging = logger
 
-    def fetch_events(
-            event,
-            argument_filters=None,
-            from_block=None,
-            to_block="latest",
-            address=None,
-            topics=None):
+        with open(contract_abi_file, "r") as f:
+            self.__abi = json.load(f)
 
-        from web3._utils.events import get_event_data
-        from web3._utils.filters import construct_event_filter_params
+        if not self.__abi:
+            raise Exception(f"ABI dict is empty. Check if file is correct: {contract_abi_file}")
 
-        """Get events using eth_getLogs API.
+        self.__contract: Contract = self.__web3.eth.contract(address=self.__contract_address, abi=self.__abi["abi"])
+        self.__https_connection = HTTPSConnection(base_url=https_url, logger=self.__logging)
+        self.__json_rpc_counter = 0
+        self.__max_block_increase = 1000
+        self.__event_callbacks = {}
 
-        This is a stateless method, as opposite to createFilter and works with
-        stateless nodes like QuikNode and Infura.
+        self.__event_loop.create_task(self.fetch_all_events())
 
-        :param event: Event instance from your contract.events
-        :param argument_filters:
-        :param from_block: Start block. Use 0 for all history/
-        :param to_block: Fetch events until this contract
-        :param address:
-        :param topics:
-        :return:
-        """
+    def get_events(self):
+        return self.__contract.events
 
+    async def fetch_all_events(self):
+        latest_block = await self.fetch_latest_block()
+        if latest_block is None:
+            raise Exception(f"Failed to fetch latest block!")
+
+        end_block = self.__start_block + 1000
+        self.__logging.warning(f"Entering catch up phase: {self.__start_block=} -->> {latest_block=}")
+        while end_block < latest_block:
+            all_event_outputs = []
+            for event in self.get_events():
+                valid_output, event_outputs = await self.fetch_event(event=event, from_block=self.__start_block, to_block=end_block)
+                if valid_output:
+                    all_event_outputs.extend(event_outputs)
+
+                await asyncio.sleep(5)
+
+            all_event_outputs.sort(key=lambda x: (x.block_number, x.transaction_idx))
+
+            for cb in self.__event_callbacks.values():
+                cb(all_event_outputs)
+
+            self.__start_block = end_block
+            end_block = self.__start_block + self.__max_block_increase
+
+        self.__logging.warning(f"Entering in line phase: {self.__start_block=} -->> {latest_block=}")
+        while True:
+            latest_block = await self.fetch_latest_block()
+            if latest_block is None:
+                raise Exception(f"Failed to fetch latest block!")
+
+            all_event_outputs = []
+            for event in self.get_events():
+                valid_output, event_outputs = await self.fetch_event(event=event, from_block=self.__start_block, to_block=latest_block)
+                if valid_output:
+                    all_event_outputs.extend(event_outputs)
+
+                await asyncio.sleep(5)
+
+            all_event_outputs.sort(key=lambda x: (x.block_number, x.transaction_idx))
+
+            for cb in self.__event_callbacks.values():
+                cb(all_event_outputs)
+
+            self.__start_block = latest_block
+            await asyncio.sleep(5)
+
+    def register_event_callback(self, idx: str, cb):
+        self.__event_callbacks[idx] = cb
+
+    async def fetch_latest_block(self):
+        counter = 0
+        while counter < 5:
+            body = {
+                "jsonrpc": "2.0",
+                "method" : RPC.eth_blockNumber,
+                "id"     : self.__json_rpc_counter
+            }
+            self.__json_rpc_counter += 1
+            try:
+                response = await self.__https_connection.fetch(path="", method="post", body=json.dumps(body))
+                if "result" in response:
+                    return int(response["result"], 16)
+                else:
+                    raise Exception(f"Received error message: {response}")
+            except Exception as e:
+                self.__logging.warning(f"Failed to fetch latest block: {e=}")
+                counter += 1
+                await asyncio.sleep(5)
+
+        return None
+
+    async def fetch_event(self, event: ContractEvent, from_block=None, to_block="latest") -> (bool, List[FunnelContractEvent]):
         if from_block is None:
             raise TypeError("Missing mandatory keyword argument to getLogs: from_Block")
-
         abi = event._get_event_abi()
         abi_codec = event.web3.codec
-
-        # Set up any indexed event filters if needed
-        argument_filters = dict()
-        _filters = dict(**argument_filters)
-
         data_filter_set, event_filter_params = construct_event_filter_params(
             abi,
             abi_codec,
             contract_address=event.address,
-            argument_filters=_filters,
+            argument_filters={},
             fromBlock=from_block,
             toBlock=to_block,
-            address=address,
-            topics=topics,
+            address=None,
+            topics=None,
         )
 
-        # Call node over JSON-RPC API
-        logs = event.web3.eth.getLogs(event_filter_params)
+        event_filter_params["fromBlock"] = hex(event_filter_params["fromBlock"])
+        event_filter_params["toBlock"]  = hex(event_filter_params["toBlock"]) if isinstance(to_block, int) else to_block
+        body = {
+            "jsonrpc": "2.0",
+            "method" : RPC.eth_getLogs,
+            "params" : [event_filter_params],
+            "id"     : self.__json_rpc_counter
+        }
 
-        # Convert raw binary event data to easily manipulable Python objects
-        for entry in logs:
-            data = get_event_data(abi_codec, abi, entry)
-            yield data
+        self.__json_rpc_counter += 1
 
-    import time
-    start_block = 24694644
-    end_block   = 24697469
+        try:
+            response = await self.__https_connection.fetch(path="", method="post", body=json.dumps(body))
+            if "result" in response:
+                result = response["result"]
+            else:
+                raise Exception(f"Received error message: {response}")
+        except Exception as e:
+            self.__logging.warning(f"Raised exception whilst fetching event: {event=}, {from_block=}, {to_block=}, {e=}")
+            return False, []
 
-    while start_block < end_block:
-        new_end_block = start_block + 1000
-        for event in fetch_events(contract.events.PaymentMade, from_block=start_block, to_block=new_end_block):
-            print(event)
-        print(start_block, new_end_block)
-        start_block = new_end_block
-        time.sleep(3)
+        output_result = []
+        if result:
+            decode_param_names = []
+            decode_param_types = []
+            for input in abi["inputs"]:
+                decode_param_names.append(input["name"])
+                decode_param_types.append(input["type"])
 
-    # from web3 import Web3
-    # from web3._utils.events import get_event_data
-    # w3 = Web3(Web3.HTTPProvider("https://rpc-mumbai.maticvigil.com"))
-    # contract = w3.eth.contract(address=address)
-    # events = w3.eth.get_logs({'fromBlock': 24220510, 'toBlock': "latest", 'address': "0xd617d99f40b254f4614f5b9cc0090ca1383551a5"})
-    #
-    # def handle_event(event, event_template):
-    #     try:
-    #         result = get_event_data(event_template.web3.codec, event_template._get_event_abi(), event)
-    #         return True, result
-    #     except:
-    #         return False, None
-    #
-    # for event in events:
-    #     suc, res = handle_event(event=event, event_template=event_template)
-    #     if suc:
-    #         print("Event found", res)
+            for res in result:
+                decoded_info = decode_abi(decode_param_types, HexBytes(res["data"]))
+                event_data = {}
+                for idx, param_name in enumerate(decode_param_names):
+                    event_data[param_name] = decoded_info[idx]
+                output_result.append(
+                    FunnelContractEvent(
+                        block_hash=res["blockHash"],
+                        transaction_hash=res["transactionHash"],
+                        address=res["address"],
+                        block_number=int(res["blockNumber"], 16),
+                        data=res["data"],
+                        transaction_idx=int(res["transactionIndex"], 16),
+                        event=abi["name"],
+                        event_data=event_data
+                    )
+                )
+
+        return True, output_result
+
+        
+if __name__ == "__main__":
+    import logging
+    import asyncio
+
+    logging.basicConfig(level=logging.DEBUG)
+    loop = asyncio.get_event_loop()
+
+    polygon = PolygonNodeClient(
+        event_loop=loop,
+        logger=logging, https_url="https://rpc-mumbai.maticvigil.com",
+        contract_address="0xaE7b635D1C9832Ee9c4ede4C5b261c61b79BD728",
+        contract_abi_file="funnel_abi.json",
+        start_block=24934959
+    )
+
+    def dummy_callback(event):
+        print(event)
+
+    polygon.register_event_callback("dummy", dummy_callback)
+
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        loop.close()

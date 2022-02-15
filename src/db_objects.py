@@ -57,3 +57,90 @@ class Product:
 
     def __hash__(self) -> int:
         return hash(self.product_id) ^ hash(self.store_id)
+
+
+@dataclass(init=True, repr=True)
+class FunnelEvent:
+    block_hash: str
+    transaction_hash: str
+    block_number: int
+    address: str
+    data: str
+    transaction_idx: int
+
+
+@dataclass(init=True, repr=True)
+class FunnelContractEvent(FunnelEvent):
+    event: str
+    event_data: dict
+
+
+@dataclass(init=True, repr=True)
+class StoreCreated(FunnelEvent):
+    storeAddress: str
+    storeOwner: str
+
+
+@dataclass(init=True, repr=True)
+class PaymentMade(FunnelEvent):
+    customer: str
+    storeAddress: str
+    productNames: List[str]
+
+    def __post_init__(self):
+        if isinstance(self.productNames, tuple):
+            self.product_names = list(self.productNames)
+
+
+@dataclass(init=True, repr=True)
+class ProductCreated(FunnelEvent):
+    storeAddress: str
+    productName: str
+    price: int
+
+
+@dataclass(init=True, repr=True)
+class ProductRemoved(FunnelEvent):
+    storeAddress: str
+    productName: str
+
+
+@dataclass(init=True, repr=True)
+class ProductUpdated(FunnelEvent):
+    storeAddress: str
+    productName: str
+    newPrice: int
+
+
+@dataclass(init=True, repr=True)
+class RefundMade(FunnelEvent):
+    customer: str
+    storeAddress: str
+    productNames: List[str]
+
+    def __post_init__(self):
+        if isinstance(self.productNames, tuple):
+            self.product_names = list(self.productNames)
+
+
+@dataclass(init=True, repr=True)
+class StoreRemoved(FunnelEvent):
+    storeAddress: str
+
+
+@dataclass(init=True, repr=True)
+class StoreUpdated(FunnelEvent):
+    storeAddress: str
+    newStoreAddress: str
+
+
+ALLOWED_EVENTS = {
+    "StoreCreated"  : StoreCreated,
+    "PaymentMade"   : PaymentMade,
+    "ProductCreated": ProductCreated,
+    "ProductRemoved": ProductRemoved,
+    "ProductUpdated": ProductUpdated,
+    "RefundMade"    : RefundMade,
+    "StoreRemoved"  : StoreRemoved,
+    "StoreUpdated"  : StoreUpdated
+}
