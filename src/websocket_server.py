@@ -207,7 +207,7 @@ class WebSocketServer(WebSocketServerFactory):
                             return
                         except Exception as e:
                             error_msg = "Wrong keys/value types for product item"
-,
+
                     elif msg_received.params[0] == DBType.stores.value:
                         try:
                             store = Store(**msg_received.params[1])
