@@ -132,6 +132,9 @@ class WebSocketServer(WebSocketServerFactory):
 
         # add db connection
         self.db_connect = postgresDBClient('product_store')
+        self.db_connect_products = postgresDBClient('products')
+        self.db_connect_stores = postgresDBClient('stores')
+        self.db_connect_transactions = postgresDBClient('transactions')
 
         # add server to asyncio + run until complete
         self.server = self.event_loop.create_server(protocol_factory=self,
@@ -317,7 +320,29 @@ class WebSocketServer(WebSocketServerFactory):
                 cls_obj_data.update(extra_data)
                 init_obj = cls_obj(**cls_obj_data)
                 self.logging.warning(init_obj)
-
+                # add write feature to DB here
+                write_db(cls_obj, cls_obj_data) #to check on params
+                
+    def write_db(self, cls_obj, event_data):
+        if cls_obj == "StoreCreated":
+            self.db_connect_stores.write_StoreCreated(event_data)
+        elif cls_obj == "StoreRemoved":
+            self.db_connect_stores.write_StoreRemoved(event_data)
+        elif cls_obj == "StoreUpdated":
+            self.db_connect_stores.write_StoreUpdated(event_data)
+        elif cls_obj == "ProductCreated":
+            self.db_connect_products.write_ProductUpdated(event_data)
+        elif cls_obj == "ProductRemoved":
+            self.db_connect_products.write_ProductRemoved(event_data)
+        elif cls_obj == "ProductUpdated":
+            self.db_connect_products.write_ProductUpdated(event_data)
+        elif cls_obj == "PaymentMade":
+            self.db_connect_transactions.write_PaymentMade(event_data)
+        elif cls_obj == "RefundMade":
+            self.db_connect_transactions.write_RefundMade(event_data)
+    
+    # store/remove/update memory cache? 
+                
 
 if __name__ == '__main__':
     import logging

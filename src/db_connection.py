@@ -203,6 +203,125 @@ class postgresDBClient:
         # Commit changes
         self.conn.commit()
 
+    def write_StoreCreated(self, store: StoreCreated):
+        storecreate_tuple = dataclasses.astuple(store)
+
+        # Insert StoreCreated event details 
+        insert_StoreCreated = """ INSERT INTO storecreated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, STOREOWNER) VALUES (%s,%s,%s,%s,%s,%s,%s, %s)"""
+        self.cursor.execute(insert_StoreCreated, storecreate_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into StoreCreated table")
+
+        # Commit changes
+        self.conn.commit()
+
+     def write_StoreRemoved(self, store: StoreRemoved): 
+        storeremove_tuple = dataclasses.astuple(store)
+
+        # Insert StoreRemoved event details 
+        insert_StoreRemoved = """ INSERT INTO storeremoved (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS) VALUES (%s,%s,%s,%s,%s,%s,%s)"""
+
+        self.cursor.execute(insert_StoreRemoved, storeremove_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into StoreRemoved table")
+
+        # Commit changes
+        self.conn.commit()
+
+     def write_StoreUpdated(self, store: StoreUpdated): 
+        storeupdate_tuple = dataclasses.astuple(store)
+
+        # Insert StoreUpdated event details 
+        insert_StoreUpdated = """ INSERT INTO storeupdated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, NEWSTOREADDRESS) VALUES (%s,%s,%s,%s,%s,%s,%s, %s)"""
+
+        self.cursor.execute(insert_StoreUpdated, storeupdate_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into StoreUpdated table")
+
+        # Commit changes
+        self.conn.commit()
+
+     def write_ProductCreated(self, product: ProductCreated):
+        productcreate_tuple = dataclasses.astuple(product)
+
+        # Insert ProductCreated event details 
+        insert_ProductCreated = """ INSERT INTO productcreated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, PRODUCTNAME, PRICE) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+        self.cursor.execute(insert_ProductCreated, productcreate_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into ProductCreated table")
+
+        # Commit changes
+        self.conn.commit()
+
+     def write_ProductRemoved(self, product: ProductRemoved): 
+        productremove_tuple = dataclasses.astuple(product)
+
+        # Insert ProductRemoved event details 
+        insert_ProductRemoved = """ INSERT INTO productremoved (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, PRODUCTNAME) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"""
+
+        self.cursor.execute(insert_ProductRemoved, productremove_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into ProductRemoved table")
+
+        # Commit changes
+        self.conn.commit()
+
+     def write_ProductUpdated(self, product: ProductUpdated): 
+        productupdate_tuple = dataclasses.astuple(product)
+
+        # Insert ProductUpdated event details 
+        insert_ProductUpdated = """ INSERT INTO productupdated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, PRODUCTNAME, NEWPRICE) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+
+        self.cursor.execute(insert_ProductUpdated, productupdate_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into ProductUpdated table")
+
+        # Commit changes
+        self.conn.commit()
+    
+    def write_PaymentMade(self, transaction: PaymentMade): 
+        paymentmade_tuple = dataclasses.astuple(transaction)
+
+        # Insert PaymentMade event details 
+        insert_PaymentMade = """ INSERT INTO paymentmade (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, CUSTOMER, STOREADDRESS, PRODUCTNAME) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+
+        self.cursor.execute(insert_PaymentMade, paymentmade_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into PaymentMade table")
+
+        # Commit changes
+        self.conn.commit()
+
+     def write_RefundMade(self, transaction: RefundMade): 
+        refundmade_tuple = dataclasses.astuple(transaction)
+
+        # Insert RefundMade event details 
+        insert_RefundMade = """ INSERT INTO refundmade (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, CUSTOMER, STOREADDRESS, PRODUCTNAME) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+
+        self.cursor.execute(insert_RefundMade, refundmade_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into RefundMade table")
+
+        # Commit changes
+        self.conn.commit()
+
+
 if __name__ == "__main__":
     db_user = postgresDBClient('users')
     # db_transaction = postgresDBClient('transactions')
