@@ -321,11 +321,11 @@ class WebSocketServer(WebSocketServerFactory):
                 init_obj = cls_obj(**cls_obj_data)
                 self.logging.warning(init_obj)
                 # add write feature to DB here
-                write_db(cls_obj, cls_obj_data) #to check on params
+                write_db(init_obj) #to check on params
                 
-    def write_db(self, cls_obj, event_data):
-        if cls_obj == "StoreCreated":
-            self.db_connect_stores.write_StoreCreated(event_data)
+    def write_db(self, init_obj):
+        if isinstance(init_obj, StoreCreated):
+            self.db_connect_stores.writeStoreCreated(init_obj)
         elif cls_obj == "StoreRemoved":
             self.db_connect_stores.write_StoreRemoved(event_data)
         elif cls_obj == "StoreUpdated":

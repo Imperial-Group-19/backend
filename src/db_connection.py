@@ -26,7 +26,7 @@ class postgresDBClient:
         # Connection establishment
         self.db_type = db_type
         self.conn = psycopg2.connect(
-            database=db_type,
+            database='salesfunnel',
             user='postgres',
             password = 'crypto',
             host='127.0.0.1', 
@@ -53,6 +53,11 @@ class postgresDBClient:
             self.products_data = {}
             self.stores_data = self.get_stores()
             self.products_data = self.get_products()
+
+        self.stores: Dict[Store, Store] = {}
+        self.products: Dict[Product, Product] = {}
+        self.paymentmade: List[PaymentMade] = [] 
+        self.refundmade: List[RefundMade] = []
 
     def connect(self): #testing function
         # Connection establishment
@@ -217,6 +222,15 @@ class postgresDBClient:
         # Commit changes
         self.conn.commit()
 
+        actual_store = Store(
+            id=store.storeAddress,
+            store_address = store.storeOwner,
+            title="",
+
+        )
+        self.stores[actual_store] = actual_store
+
+
      def write_StoreRemoved(self, store: StoreRemoved): 
         storeremove_tuple = dataclasses.astuple(store)
 
@@ -246,6 +260,8 @@ class postgresDBClient:
 
         # Commit changes
         self.conn.commit()
+
+        #change for store - delete old store and add new ; change for product
 
      def write_ProductCreated(self, product: ProductCreated):
         productcreate_tuple = dataclasses.astuple(product)
