@@ -1,17 +1,33 @@
 from typing import Dict, List
 import dataclasses
 import psycopg2
-from db_objects import Store, User, Transaction, Product
+from db_objects import Store, User, Transaction, Product, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, ProductCreated, ProductRemoved, ProductUpdated
+
+from sshtunnel import SSHTunnelForwarder
+from getpass import getpass
+
+username = input("Enter SSH username: ")
+pkey = input("Enter SSH private key: ")
+pw = getpass(prompt = 'Enter SSH private key password: ')
+
+PORT = 5432
+server = SSHTunnelForwarder(('35.195.58.180', 22),
+         ssh_username= username,
+         ssh_pkey = pkey, 
+         ssh_private_key_password= pw,
+         remote_bind_address=('localhost', PORT),
+         local_bind_address=('localhost', PORT),
+         allow_agent=False)
+server.start()
 
 class postgresDBClient:
-    def __init__(self, db_type):
+    def __init__(self):
         # Connection establishment
-        self.db_type = db_type
         self.conn = psycopg2.connect(
-            database=db_type,
+            database='salesfunnel',
             user='postgres',
             password = 'crypto',
-            host='localhost', 
+            host='127.0.0.1', 
             port= '5432'
         )
         
@@ -23,26 +39,19 @@ class postgresDBClient:
         # Print when connection is successful
         print("Database has been connected successfully !!");
 
-        # Read data at initialisation
-        if(db_type == 'users'):
-            self.users_data = {}
-            self.users_data = self.get_users()
-        elif(db_type == 'transactions'):
-            self.transactions_data = {}
-            self.transactions_data = self.get_transactions()
-        elif(db_type == 'product_store'):
-            self.stores_data = {}
-            self.products_data = {}
-            self.stores_data = self.get_store()
-            self.products_data = self.get_product()
+        # Initialise stores, products, transactions
+        self.stores: Dict[Store, Store] = {}
+        self.products: Dict[Product, Product] = {}
+        self.paymentmade: List[PaymentMade] = [] 
+        self.refundmade: List[RefundMade] = []
 
     def connect(self): #testing function
         # Connection establishment
         self.conn = psycopg2.connect(
-            database='transactions',
+            database='salesfunnel',
             user='postgres',
             password = 'crypto',
-            host='localhost', 
+            host='127.0.0.1', 
             port= '5432'
         )
 
@@ -58,37 +67,6 @@ class postgresDBClient:
         # Closing the connection
         self.cursor.close()
         self.conn.close()
-
-
-    # read at initialisation and store data in cache - hash to identify each table 
-    # store data as dictionary
- 
-    def get_users(self) -> Dict[User, User]:
-        # Query
-        self.cursor.execute("SELECT name, email_add, wallet_add FROM userinfo ORDER BY name")
-        rows = self.cursor.fetchall()
-        print("The number of users: ", self.cursor.rowcount)
-
-        users = {}
-        for row in rows:
-            user = User(*row)
-            users[user] = user
-
-        return users
-
-
-    def get_transactions(self) -> Dict[Transaction, Transaction]:
-        # Query
-        self.cursor.execute("SELECT wallet_add, store_add, product, time_stamp FROM transactions ORDER BY wallet_add")
-        rows = self.cursor.fetchall()
-        print("The number of transactions: ", self.cursor.rowcount)
-        
-        transactions = {}
-        for row in rows:
-            txn = Transaction(*row)
-            transactions[txn] = txn
-
-        return transactions
     
     def get_store(self) -> Dict[Store, Store]:
         # Query
@@ -117,57 +95,22 @@ class postgresDBClient:
             products[product] = product
 
         return products
-        
-
-    def add_users(self, user: User):
-        user_tuple = dataclasses.astuple(user)
-
-        # Insert user details 
-        insert_user = """ INSERT INTO userinfo (NAME, EMAIL_ADD, WALLET_ADD) VALUES (%s,%s,%s)"""
-        # insert_user_str = f"INSERT INTO userinfo (NAME, EMAIL_ADD, WALLET_ADD) VALUES ({user})"
-
-        self.cursor.execute(insert_user, user_tuple)
-
-
-        # Check insertion
-        count = self.cursor.rowcount
-        print(count, "Record inserted successfully into userinfo table")
-
-        # Commit changes
-        self.conn.commit()
-
-        
-    def add_transactions(self, trxn: Transaction):
-        trxn_tuple = dataclasses.astuple(trxn)
-
-        # Insert transaction details 
-        insert_transaction = """ INSERT INTO transactions (WALLET_ADD, STORE_ADD, PRODUCT, TIME_STAMP) VALUES (%s,%s,%s,%s)"""
-
-        self.cursor.execute(insert_transaction, trxn_tuple)
-
-
-        # Check insertion
-        count = self.cursor.rowcount
-        print(count, "Record inserted successfully into transactions table")
-
-        # Commit changes
-        self.conn.commit()
 
 
     def add_stores(self, st: Store):
-            st_tuple = dataclasses.astuple(st)
+        st_tuple = dataclasses.astuple(st)
 
-            # Insert store details 
-            insert_store = """ INSERT INTO stores (STORE_ID, TITLE, DESCRIPTION, STORE_ADD) VALUES (%s,%s,%s,%s)"""
+        # Insert store details 
+        insert_store = """ INSERT INTO stores (STORE_ID, TITLE, DESCRIPTION, STORE_ADD) VALUES (%s,%s,%s,%s)"""
 
-            self.cursor.execute(insert_store, st_tuple)
+        self.cursor.execute(insert_store, st_tuple)
 
-            # Check insertion
-            count = self.cursor.rowcount
-            print(count, "Record inserted successfully into stores table")
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into stores table")
 
-            # Commit changes
-            self.conn.commit()
+        # Commit changes
+        self.conn.commit()
 
     def add_products(self, prdt: Product):
         prdt_tuple = dataclasses.astuple(prdt)
@@ -185,29 +128,268 @@ class postgresDBClient:
         # Commit changes
         self.conn.commit()
 
-if __name__ == "__main__":
-    db_user = postgresDBClient('users')
-    db_transaction = postgresDBClient('transactions')
-    db_product_store = postgresDBClient('product_store')
-    
-    print(db_user.users_data)
-    print(db_transaction.transactions_data)
-    print(db_product_store.stores_data)
-    print(db_product_store.products_data)
-    
-    # new_user = User("John Smith", "JC@ic.ac.uk", "1EXAMPLE2Polygon3MATIC456")
-    # db_user.add_users(new_user)
+    # def update_store_title_description #to confirm params
 
-    # ERROR IN PRODUCT DATA TYPE
-    # new_txn = Transaction("1EXAMPLE2Polygon3MATIC456", "0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6", new_product, 120000)
-    # db_transaction.add_transactions(new_txn)
+    # def update_product_title_description_features #to confirm params
+
+    def delete_stores(self, store: Store):
+        store_address = store.id
+        
+        # Delete store by store_address
+        self.cursor.execute("DELETE FROM stores WHERE id = %s", (store_address,))
+
+        # get the number of updated rows
+        rows_deleted = self.cursor.rowcount
+        print(rows_deleted, "Record deleted from stores table")
+
+        # Commit the changes to the database
+        conn.commit()
+        
+    def delete_products(self, product: Product):
+        product_name = product.product_id
+        
+        # Delete store by store_address
+        self.cursor.execute("DELETE FROM products WHERE product_id = %s", (product_name,))
+
+        # get the number of updated rows
+        rows_deleted = self.cursor.rowcount
+        print(rows_deleted, "Record deleted from products table")
+
+        # Commit the changes to the database
+        conn.commit()
+
+
+    def write_store_created(self, store: StoreCreated):
+        storecreate_tuple = dataclasses.astuple(store)
+
+        # Insert StoreCreated event details 
+        insert_store_created = """ INSERT INTO storecreated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, STOREOWNER) VALUES (%s,%s,%s,%s,%s,%s,%s, %s)"""
+        self.cursor.execute(insert_store_created, storecreate_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into StoreCreated table")
+
+        # Commit changes
+        self.conn.commit()
+
+        # Create new store
+        new_store = Store(
+            id=store.storeAddress,
+            title="",
+            description = "",
+            store_owner = store.storeOwner,
+        )
+
+        # Add to dictionary
+        self.stores[new_store] = new_store
+
+        # Add to store table in DB
+        add_stores(new_store)
+
+
+    def write_store_removed(self, store: StoreRemoved): 
+        storeremove_tuple = dataclasses.astuple(store)
+
+        # Insert StoreRemoved event details 
+        insert_store_removed = """ INSERT INTO storeremoved (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS) VALUES (%s,%s,%s,%s,%s,%s,%s)"""
+
+        self.cursor.execute(insert_store_removed, storeremove_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into StoreRemoved table")
+
+        # Commit changes
+        self.conn.commit()
+
+        # Remove store from dictionary and DB -> and also remove related products in store
+        for current_store in self.stores:
+            if(current_store.id == store.storeAddress):
+                self.stores.pop(current_store)
+                delete_stores(current_store) 
+
+        
+        for current_product in self.product:
+            if(current_product.store_id == store.storeAddress):
+                self.products.pop(current_product)
+                delete_products(current_product) 
+
+
+    def write_store_updated(self, store: StoreUpdated): 
+        storeupdate_tuple = dataclasses.astuple(store)
+
+        # Insert StoreUpdated event details 
+        insert_store_updated = """ INSERT INTO storeupdated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, NEWSTOREADDRESS) VALUES (%s,%s,%s,%s,%s,%s,%s, %s)"""
+
+        self.cursor.execute(insert_store_updated, storeupdate_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into StoreUpdated table")
+
+        # Commit changes
+        self.conn.commit()
+
+        # Create new store
+        new_store = Store(
+            id=store.newStoreAddress,
+            title="",
+            description = "",
+            store_owner = store.storeOwner,
+        )
+
+        # Delete old store and add new store to dictionary and DB
+        # Delete related products
+        for current_store in self.stores:
+            if(current_store.id == store.storeAddress):
+                self.stores.pop(current_store)
+                delete_stores(current_store) 
+
+        self.stores[new_store] = new_store
+        add_stores(new_store)
+    
+        for current_product in self.product:
+            if(current_product.store_id == store.storeAddress):
+                self.products.pop(current_product)
+                delete_products(current_product) 
+
+
+    def write_product_created(self, product: ProductCreated):
+        productcreate_tuple = dataclasses.astuple(product)
+
+        # Insert ProductCreated event details 
+        insert_product_created = """ INSERT INTO productcreated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, PRODUCTNAME, PRICE) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+        self.cursor.execute(insert_product_created, productcreate_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into ProductCreated table")
+
+        # Commit changes
+        self.conn.commit()
+
+        # Create new product
+        new_product = Product(
+            product_id = product.productName,
+            store_id = product.storeAddress,
+            title = " ",
+            description = " ",
+            price = product.price,
+            features = []
+        )
+
+        # Add to dictionary
+        self.products[new_product] = new_product
+
+        # Add to product table in DB
+        add_products(new_product)
+
+
+    def write_product_removed(self, product: ProductRemoved): 
+        productremove_tuple = dataclasses.astuple(product)
+
+        # Insert ProductRemoved event details 
+        insert_product_removed = """ INSERT INTO productremoved (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, PRODUCTNAME) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"""
+
+        self.cursor.execute(insert_product_removed, productremove_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into ProductRemoved table")
+
+        # Commit changes
+        self.conn.commit()
+
+        # Remove product from dictionary and DB
+        for current_product in self.product:
+            if(current_product.product_id == product.productName):
+                self.products.pop(current_product)
+                delete_products(current_product) 
+
+
+    def write_product_updated(self, product: ProductUpdated): 
+        productupdate_tuple = dataclasses.astuple(product)
+
+        # Insert ProductUpdated event details 
+        insert_product_updated = """ INSERT INTO productupdated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, PRODUCTNAME, NEWPRICE) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+
+        self.cursor.execute(insert_product_updated, productupdate_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into ProductUpdated table")
+
+        # Commit changes
+        self.conn.commit()
+
+        # Create new product
+        new_product = Product(
+            product_id = product.productName,
+            store_id = product.storeAddress,
+            title = " ",
+            description = " ",
+            price = product.newPrice,
+            features = []
+        )
+
+        # Remove old product from dictionary and DB and add new product
+        for current_product in self.product:
+            if(current_product.product_id == product.productName):
+                self.products.pop(current_product)
+                delete_products(current_product) 
+        
+        self.products[new_product] = new_product
+
+        # Add to product table in DB
+        add_products(new_product)
+    
+    def write_payment_made(self, transaction: PaymentMade): 
+        paymentmade_tuple = dataclasses.astuple(transaction)
+
+        # Insert PaymentMade event details 
+        insert_payment_made = """ INSERT INTO paymentmade (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, CUSTOMER, STOREADDRESS, PRODUCTNAME) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+
+        self.cursor.execute(insert_payment_made, paymentmade_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into PaymentMade table")
+
+        # Commit changes
+        self.conn.commit()
+
+        # Add to list
+        self.paymentmade.append(transaction)
+
+    def write_refund_made(self, transaction: RefundMade): 
+        refundmade_tuple = dataclasses.astuple(transaction)
+
+        # Insert RefundMade event details 
+        insert_refund_made = """ INSERT INTO refundmade (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, CUSTOMER, STOREADDRESS, PRODUCTNAME) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+
+        self.cursor.execute(insert_refund_made, refundmade_tuple)
+
+        # Check insertion
+        count = self.cursor.rowcount
+        print(count, "Record inserted successfully into RefundMade table")
+
+        # Commit changes
+        self.conn.commit()
+
+        # Add to list
+        self.refundmade.append(transaction)
+
+
+if __name__ == "__main__":
+    db = postgresDBClient('salesfunnel')
     
     # new_store = Store("super-algorithms", "Super Algorithms Inc.", 
     #                   "We help you prepare for Tech Interviews", 
     #                   "0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6")
-    # db_product_store.add_stores(new_store)
-    # db_product_store.stores_data = db_product_store.stores_data.get_store()
-    # print(db_product_store.stores_data)
+    # db.add_stores(new_store)
+    # db.stores = db.stores.get_store()
+    # print(db.stores)
 
 
     # new_product = Product("C++", "super-algorithms", "C++ course", 
@@ -218,10 +400,3 @@ if __name__ == "__main__":
     # db_product_store.add_products(new_product)
     # db_product_store.products_data = db_product_store.products_data.get_product()
     # print(db_product_store.products_data)
-
-
-
-
-
-    
-    

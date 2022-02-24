@@ -13,6 +13,7 @@ from autobahn.asyncio.websocket import WebSocketServerProtocol, WebSocketServerF
 from autobahn.websocket.protocol import ConnectionRequest, WebSocketProtocol
 
 from db_objects import Store, Product, FunnelEvent, ALLOWED_EVENTS, FunnelContractEvent
+from db_connection import postgresDBClient
 from message_conversion import MessageConverter
 from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, \
     WSMsgType, Insert
@@ -136,6 +137,9 @@ class WebSocketServer(WebSocketServerFactory):
         self.__products_counter = 0
         self.__stores_counter   = 0
 
+        #add db client
+        self.db_connect = postgresDBClient()
+        
         # add server to asyncio + run until complete
         self.server = self.event_loop.create_server(protocol_factory=self,
                                                     host="", port=self.port)
@@ -316,6 +320,26 @@ class WebSocketServer(WebSocketServerFactory):
                 cls_obj_data.update(extra_data)
                 init_obj = cls_obj(**cls_obj_data)
                 self.logging.warning(init_obj)
+                # add write feature to DB
+                self.write_db(init_obj)
+
+    def write_db(self, init_obj):
+        if isinstance(init_obj, StoreCreated):
+            self.db_connect.write_store_created(init_obj)
+        elif isinstance(init_obj, StoreRemoved):
+            self.db_connect.write_store_removed(init_obj)
+        elif isinstance(init_obj, StoreUpdated):
+            self.db_connect.write_store_updated(init_obj)
+        elif isinstance(init_obj, ProductCreated):
+            self.db_connect.write_product_updated(init_obj)
+        elif isinstance(init_obj, ProductRemoved):
+            self.db_connect.write_product_removed(init_obj)
+        elif isinstance(init_obj, ProductUpdated):
+            self.db_connect.write_product_updated(init_obj)
+        elif isinstance(init_obj, PaymentMade):
+            self.db_connect.write_payment_made(init_obj)
+        elif isinstance(init_obj, RefundMade):
+            self.db_connect.write_refund_made(init_obj)
 
 
 if __name__ == '__main__':
