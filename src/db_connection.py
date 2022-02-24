@@ -20,6 +20,8 @@ server = SSHTunnelForwarder(('35.195.58.180', 22),
          allow_agent=False)
 server.start()
 
+# ISSUE: DUPLICATES ARE WRITTEN TO DB BEFORE ERROR THROWN TO SERVER AND SERVER STOPS RUNNING
+
 class postgresDBClient:
     def __init__(self):
         # Connection establishment
@@ -101,13 +103,13 @@ class postgresDBClient:
         st_tuple = dataclasses.astuple(st)
 
         # Insert store details 
-        insert_store = """ INSERT INTO stores (STORE_ID, TITLE, DESCRIPTION, STORE_ADD) VALUES (%s,%s,%s,%s)"""
+        insert_store = """ INSERT INTO stores (ID, TITLE, DESCRIPTION, STORE_OWNER) VALUES (%s,%s,%s,%s)"""
 
         self.cursor.execute(insert_store, st_tuple)
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record inserted successfully into stores table")
+        print(count, "Record inserted successfully into Stores table")
 
         # Commit changes
         self.conn.commit()
@@ -123,14 +125,11 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record inserted successfully into products table")
+        print(count, "Record inserted successfully into Products table")
 
         # Commit changes
         self.conn.commit()
 
-    # def update_store_title_description #to confirm params
-
-    # def update_product_title_description_features #to confirm params
 
     def delete_stores(self, store: Store):
         store_address = store.id
@@ -140,10 +139,10 @@ class postgresDBClient:
 
         # get the number of updated rows
         rows_deleted = self.cursor.rowcount
-        print(rows_deleted, "Record deleted from stores table")
+        print(rows_deleted, "Record deleted from Stores table")
 
         # Commit the changes to the database
-        conn.commit()
+        self.conn.commit()
         
     def delete_products(self, product: Product):
         product_name = product.product_id
@@ -153,10 +152,10 @@ class postgresDBClient:
 
         # get the number of updated rows
         rows_deleted = self.cursor.rowcount
-        print(rows_deleted, "Record deleted from products table")
+        print(rows_deleted, "Record deleted from Products table")
 
         # Commit the changes to the database
-        conn.commit()
+        self.conn.commit()
 
 
     def write_store_created(self, store: StoreCreated):
@@ -184,8 +183,8 @@ class postgresDBClient:
         # Add to dictionary
         self.stores[new_store] = new_store
 
-        # Add to store table in DB
-        add_stores(new_store)
+        # Add to store table in DB - don't add here - to add when all information received from frontend
+        self.add_stores(new_store)
 
 
     def write_store_removed(self, store: StoreRemoved): 
@@ -203,17 +202,20 @@ class postgresDBClient:
         # Commit changes
         self.conn.commit()
 
-        # Remove store from dictionary and DB -> and also remove related products in store
+        # Remove store from dictionary and DB -> and also remove related products in store                
+        for current_product in self.products:
+            if(current_product.store_id == store.storeAddress):
+                self.products.pop(current_product)
+                self.delete_products(current_product) 
+                break
+                
         for current_store in self.stores:
             if(current_store.id == store.storeAddress):
                 self.stores.pop(current_store)
-                delete_stores(current_store) 
+                self.delete_stores(current_store)
+                break 
 
-        
-        for current_product in self.product:
-            if(current_product.store_id == store.storeAddress):
-                self.products.pop(current_product)
-                delete_products(current_product) 
+
 
 
     def write_store_updated(self, store: StoreUpdated): 
@@ -236,23 +238,27 @@ class postgresDBClient:
             id=store.newStoreAddress,
             title="",
             description = "",
-            store_owner = store.storeOwner,
+            store_owner = store.storeAddress, #to change to storeOwner when available on smartcontract
         )
 
         # Delete old store and add new store to dictionary and DB
         # Delete related products
+
+        for current_product in self.products:
+            if(current_product.store_id == store.storeAddress):
+                self.products.pop(current_product)
+                self.delete_products(current_product)
+                break 
+
         for current_store in self.stores:
             if(current_store.id == store.storeAddress):
                 self.stores.pop(current_store)
-                delete_stores(current_store) 
+                self.delete_stores(current_store) 
+                break
 
         self.stores[new_store] = new_store
-        add_stores(new_store)
+        self.add_stores(new_store)
     
-        for current_product in self.product:
-            if(current_product.store_id == store.storeAddress):
-                self.products.pop(current_product)
-                delete_products(current_product) 
 
 
     def write_product_created(self, product: ProductCreated):
@@ -283,7 +289,7 @@ class postgresDBClient:
         self.products[new_product] = new_product
 
         # Add to product table in DB
-        add_products(new_product)
+        self.add_products(new_product)
 
 
     def write_product_removed(self, product: ProductRemoved): 
@@ -302,14 +308,15 @@ class postgresDBClient:
         self.conn.commit()
 
         # Remove product from dictionary and DB
-        for current_product in self.product:
+        for current_product in self.products:
             if(current_product.product_id == product.productName):
                 self.products.pop(current_product)
-                delete_products(current_product) 
+                self.delete_products(current_product)
+                break 
 
 
-    def write_product_updated(self, product: ProductUpdated): 
-        productupdate_tuple = dataclasses.astuple(product)
+    def write_product_updated(self, product_update: ProductUpdated): 
+        productupdate_tuple = dataclasses.astuple(product_update)
 
         # Insert ProductUpdated event details 
         insert_product_updated = """ INSERT INTO productupdated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, PRODUCTNAME, NEWPRICE) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
@@ -325,30 +332,39 @@ class postgresDBClient:
 
         # Create new product
         new_product = Product(
-            product_id = product.productName,
-            store_id = product.storeAddress,
+            product_id = product_update.productName,
+            store_id = product_update.storeAddress,
             title = " ",
             description = " ",
-            price = product.newPrice,
+            price = product_update.newPrice,
             features = []
         )
 
         # Remove old product from dictionary and DB and add new product
-        for current_product in self.product:
-            if(current_product.product_id == product.productName):
+        for current_product in self.products:
+            if(current_product.product_id == product_update.productName):
                 self.products.pop(current_product)
-                delete_products(current_product) 
+                self.delete_products(current_product)
+                break 
         
         self.products[new_product] = new_product
 
         # Add to product table in DB
-        add_products(new_product)
+        self.add_products(new_product)
     
+    def to_array(self, value):
+        return '{' + ','.join(value) + '}'
+
     def write_payment_made(self, transaction: PaymentMade): 
-        paymentmade_tuple = dataclasses.astuple(transaction)
+
+        paymentmade_list = list(dataclasses.asdict(transaction).values()) 
+
+        paymentmade_list[-1] = self.to_array(paymentmade_list[-1])
+        
+        paymentmade_tuple = tuple(paymentmade_list)
 
         # Insert PaymentMade event details 
-        insert_payment_made = """ INSERT INTO paymentmade (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, CUSTOMER, STOREADDRESS, PRODUCTNAME) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+        insert_payment_made = """ INSERT INTO paymentmade (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, CUSTOMER, STOREADDRESS, PRODUCTNAMES) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
 
         self.cursor.execute(insert_payment_made, paymentmade_tuple)
 
@@ -362,11 +378,15 @@ class postgresDBClient:
         # Add to list
         self.paymentmade.append(transaction)
 
-    def write_refund_made(self, transaction: RefundMade): 
-        refundmade_tuple = dataclasses.astuple(transaction)
+    def write_refund_made(self, transaction: RefundMade):
+        refundmade_list = list(dataclasses.asdict(transaction).values()) 
+
+        refundmade_list[-1] = self.to_array(refundmade_list[-1])
+        
+        refundmade_tuple = tuple(refundmade_list)
 
         # Insert RefundMade event details 
-        insert_refund_made = """ INSERT INTO refundmade (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, CUSTOMER, STOREADDRESS, PRODUCTNAME) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+        insert_refund_made = """ INSERT INTO refundmade (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, CUSTOMER, STOREADDRESS, PRODUCTNAMES) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
 
         self.cursor.execute(insert_refund_made, refundmade_tuple)
 

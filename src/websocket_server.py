@@ -12,7 +12,7 @@ import ujson
 from autobahn.asyncio.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from autobahn.websocket.protocol import ConnectionRequest, WebSocketProtocol
 
-from db_objects import Store, Product, FunnelEvent, ALLOWED_EVENTS, FunnelContractEvent
+from db_objects import Store, Product, FunnelEvent, ALLOWED_EVENTS, FunnelContractEvent, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, ProductCreated, ProductRemoved, ProductUpdated
 from db_connection import postgresDBClient
 from message_conversion import MessageConverter
 from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, \
@@ -24,7 +24,7 @@ example_store = Store(
     id="hey",
     title="hey sup",
     description="describe hey sup",
-    wallet_address="0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6"
+    store_owner="0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6"
 )
 
 
@@ -331,7 +331,7 @@ class WebSocketServer(WebSocketServerFactory):
         elif isinstance(init_obj, StoreUpdated):
             self.db_connect.write_store_updated(init_obj)
         elif isinstance(init_obj, ProductCreated):
-            self.db_connect.write_product_updated(init_obj)
+            self.db_connect.write_product_created(init_obj)
         elif isinstance(init_obj, ProductRemoved):
             self.db_connect.write_product_removed(init_obj)
         elif isinstance(init_obj, ProductUpdated):
