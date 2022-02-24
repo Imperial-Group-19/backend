@@ -72,7 +72,7 @@ class postgresDBClient:
     
     def get_store(self) -> Dict[Store, Store]:
         # Query
-        self.cursor.execute("SELECT store_id, title, description, store_add FROM stores ORDER BY store_id")
+        self.cursor.execute("SELECT id, title, description, store_owner FROM stores ORDER BY id")
         rows = self.cursor.fetchall()
         print("The number of stores: ", self.cursor.rowcount)
         
@@ -128,6 +128,32 @@ class postgresDBClient:
         print(count, "Record inserted successfully into Products table")
 
         # Commit changes
+        self.conn.commit()
+
+    def update_store(self, store: Store):
+        # Update by store_address
+        self.cursor.execute("UPDATE stores SET title = %s, description = %s WHERE id = %s", (store.title, store.description, store.id))
+
+        # get the number of updated stores
+        rows_updated = self.cursor.rowcount
+        print(rows_updated, "1 Record updated on Stores table")
+
+        # Commit the changes to the database
+        self.conn.commit()
+
+
+    def update_product(self, product: Product):
+        product_list = list(dataclasses.asdict(product).values()) 
+        features = self.to_array(product_list[-1])
+        
+        # Update by product_address
+        self.cursor.execute("UPDATE products SET title = %s, description = %s, features = %s WHERE product_id = %s", (product.title, product.description, features, product.product_id))
+
+        # get the number of updated stores
+        rows_updated = self.cursor.rowcount
+        print(rows_updated, "1 Record updated on Stores table")
+
+        # Commit the changes to the database
         self.conn.commit()
 
 
@@ -356,7 +382,6 @@ class postgresDBClient:
         return '{' + ','.join(value) + '}'
 
     def write_payment_made(self, transaction: PaymentMade): 
-
         paymentmade_list = list(dataclasses.asdict(transaction).values()) 
 
         paymentmade_list[-1] = self.to_array(paymentmade_list[-1])
@@ -402,21 +427,31 @@ class postgresDBClient:
 
 
 if __name__ == "__main__":
-    db = postgresDBClient('salesfunnel')
-    
-    # new_store = Store("super-algorithms", "Super Algorithms Inc.", 
-    #                   "We help you prepare for Tech Interviews", 
-    #                   "0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6")
-    # db.add_stores(new_store)
-    # db.stores = db.stores.get_store()
-    # print(db.stores)
+    db = postgresDBClient()
 
+    # blank_store = Store('0x02b7433ea4f93554856aa657da1494b2bf645ef0', " ", 
+    #                 " ", 
+    #                 '0x599410057bc933fd2f7319a5a835c88a9300bfb0')
+    
+    # new_store = Store('0x02b7433ea4f93554856aa657da1494b2bf645ef0', "Super Algorithms Inc.", 
+    #                   "We help you prepare for Tech Interviews", 
+    #                   '0x599410057bc933fd2f7319a5a835c88a9300bfb0')
+    # # db.add_stores(blank_store)
+    # db.update_store(new_store)
+    # db_stores = db.get_store()
+    # print(db_stores)
+
+
+    # blank_product = Product("C++", "0x02b7433ea4f93554856aa657da1494b2bf645ef0", " ", 
+    #                         " ", 10000,
+    #                         [])
 
     # new_product = Product("C++", "super-algorithms", "C++ course", 
-    #                     "Try out our original course in C++ and impress your interviewers.", 10,
+    #                     "Try out our original course in C++ and impress your interviewers.", 10000,
     #                     ["Full algorithms course in C++",
     #                     "Pointers Cheat Sheet",
     #                     "Memory Management Tips"])
-    # db_product_store.add_products(new_product)
-    # db_product_store.products_data = db_product_store.products_data.get_product()
-    # print(db_product_store.products_data)
+    # # db.add_products(blank_product)
+    # db.update_product(new_product)
+    # db_products = db.get_product()
+    # print(db_products)

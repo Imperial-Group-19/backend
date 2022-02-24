@@ -294,10 +294,11 @@ class WebSocketServer(WebSocketServerFactory):
         self.__subscribed_clients[sub_type].add(server_protocol)
         if sub_type == DBType.stores:
             msg_counter = self.__stores_counter
-            params = [DBType.stores.value, [item.__dict__ for item in current_stores.values()]]
+            self.db_connect.update_store(DBType.stores.value)
+            params = [item.__dict__ for item in params]
         elif sub_type == DBType.products:
             msg_counter = self.__products_counter
-            params = [DBType.products.value, [item.__dict__ for item in current_products.values()]]
+            self.db_connect.update_product(DBType.products.value)
         else:
             raise Exception("Unrecognised sub snapshot")
 
