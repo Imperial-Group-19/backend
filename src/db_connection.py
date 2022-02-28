@@ -6,6 +6,8 @@ from db_objects import Store, User, Transaction, Product, StoreCreated, StoreRem
 from sshtunnel import SSHTunnelForwarder
 from getpass import getpass
 
+from logging import Logger
+
 username = input("Enter SSH username: ")
 pkey = input("Enter SSH private key: ")
 pw = getpass(prompt = 'Enter SSH private key password: ')
@@ -70,9 +72,9 @@ class postgresDBClient:
         self.cursor.close()
         self.conn.close()
     
-    def get_store(self) -> Dict[Store, Store]:
+    def get_store_editable(self) -> Dict[Store, Store]:
         # Query
-        self.cursor.execute("SELECT id, title, description, store_owner FROM stores ORDER BY id")
+        self.cursor.execute("SELECT id, title, description, store_owner FROM storeseditable ORDER BY id")
         rows = self.cursor.fetchall()
         print("The number of stores: ", self.cursor.rowcount)
         
@@ -84,9 +86,9 @@ class postgresDBClient:
 
         return stores
 
-    def get_product(self) -> Dict[Product, Product]:
+    def get_product_editable(self) -> Dict[Product, Product]:
         # Query
-        self.cursor.execute("SELECT product_id, store_id, title, description, price, features FROM products ORDER BY product_id")
+        self.cursor.execute("SELECT product_id, store_id, title, description, price, features FROM productseditable ORDER BY product_id")
         rows = self.cursor.fetchall()
         print("The number of products: ", self.cursor.rowcount)
         
@@ -122,7 +124,6 @@ class postgresDBClient:
 
         self.cursor.execute(insert_product, prdt_tuple)
 
-
         # Check insertion
         count = self.cursor.rowcount
         print(count, "Record inserted successfully into Products table")
@@ -130,24 +131,58 @@ class postgresDBClient:
         # Commit changes
         self.conn.commit()
 
-    def update_store(self, store: Store):
-        # Update by store_address
-        self.cursor.execute("UPDATE stores SET title = %s, description = %s WHERE id = %s", (store.title, store.description, store.id))
+    def add_store_editable(self, store: Store):
+        # Read editable stores table 
+        existing_stores = self.get_store_editable()
+        for current_store in existing_stores:
+            if(store.id == current_store.id):
+                print("Store exists - unable to create store")
+                return
+        # Add store with updated titles and descriptions
+        store_tuple = dataclasses.astuple(store)
+
+        # Insert store details 
+        insert_store = """ INSERT INTO storeseditable (ID, TITLE, DESCRIPTION, STORE_OWNER) VALUES (%s,%s,%s,%s)"""
+
+        self.cursor.execute(insert_store, store_tuple)
 
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
-        print(rows_updated, "1 Record updated on Stores table")
+        print(rows_updated, "1 Record inserted successfully into StoresEditable table")
 
         # Commit the changes to the database
         self.conn.commit()
 
+        # Create new store
+        new_store = Store(
+            id=store.storeAddress,
+            title = store.title,
+            description = store.description,
+            store_owner = store.storeOwner,
+        )
 
-    def update_product(self, product: Product):
+        # Add to dictionary
+        self.stores[new_store] = new_store
+
+
+
+    def add_product_editable(self, product: Product):
         product_list = list(dataclasses.asdict(product).values()) 
         features = self.to_array(product_list[-1])
         
-        # Update by product_address
-        self.cursor.execute("UPDATE products SET title = %s, description = %s, features = %s WHERE product_id = %s", (product.title, product.description, features, product.product_id))
+        # Read editable products table 
+        existing_products = self.get_product_editable()
+        for current_product in existing_products:
+            if(product.product_id == current_product.product_id):
+                print("Product exists - unable to create product")
+                return
+
+        product_tuple = tuple(product_list)
+
+        # Insert product details 
+        insert_product = """ INSERT INTO productseditable (PRODUCT_ID, STORE_ID, TITLE, DESCRIPTION, PRICE, FEATURES) VALUES (%s,%s,%s,%s,%s,%s)"""
+
+        self.cursor.execute(insert_product, product_tuple)
 
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
@@ -155,6 +190,19 @@ class postgresDBClient:
 
         # Commit the changes to the database
         self.conn.commit()
+
+         # Create new product
+        new_product = Product(
+            product_id = product.productName,
+            store_id = product.storeAddress,
+            title = product.title,
+            description = product.description,
+            price = product.price,
+            features = []
+        )
+
+        # Add to dictionary
+        self.products[new_product] = new_product
 
 
     def delete_stores(self, store: Store):
@@ -206,11 +254,16 @@ class postgresDBClient:
             store_owner = store.storeOwner,
         )
 
-        # Add to dictionary
-        self.stores[new_store] = new_store
+        # # Add to dictionary
+        # self.stores[new_store] = new_store
 
-        # Add to store table in DB - don't add here - to add when all information received from frontend
-        self.add_stores(new_store)
+        # Add to uneditable store table in DB
+        try:
+            self.add_stores(new_store)
+        except Exception as e:
+            error_msg = f"Unable to add new store: Exception: {e}"
+            self.logging.warning(error_msg)
+            return
 
 
     def write_store_removed(self, store: StoreRemoved): 
@@ -240,8 +293,6 @@ class postgresDBClient:
                 self.stores.pop(current_store)
                 self.delete_stores(current_store)
                 break 
-
-
 
 
     def write_store_updated(self, store: StoreUpdated): 
@@ -311,11 +362,16 @@ class postgresDBClient:
             features = []
         )
 
-        # Add to dictionary
-        self.products[new_product] = new_product
+        # # Add to dictionary
+        # self.products[new_product] = new_product
 
-        # Add to product table in DB
-        self.add_products(new_product)
+        # Add to uneditable product table in DB
+        try:
+            self.add_products(new_product)
+        except Exception as e:
+            error_msg = f"Unable to add new product: Exception: {e}"
+            self.logging.warning(error_msg)
+            return
 
 
     def write_product_removed(self, product: ProductRemoved): 
