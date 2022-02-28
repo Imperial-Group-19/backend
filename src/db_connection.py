@@ -425,6 +425,12 @@ class postgresDBClient:
         # Add to list
         self.refundmade.append(transaction)
 
+    def get_products(self):
+        return self.products.values()
+
+    def get_stores(self):
+        return self.stores.values()
+
 
 if __name__ == "__main__":
     db = postgresDBClient()

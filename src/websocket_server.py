@@ -20,64 +20,6 @@ from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, Er
 from polygon_node_connection import PolygonNodeClient
 
 
-example_store = Store(
-    id="hey",
-    title="hey sup",
-    description="describe hey sup",
-    store_owner="0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6"
-)
-
-
-products = [
-    Product(
-        product_id="C++",
-        store_id="hey",
-        title="C++ course",
-        description="Try out our original course in C++ and impress your interviewers.",
-        price=35000,
-        features=[
-            "Full algorithms course in C++",
-            "Pointers Cheat Sheet",
-            "Memory Management Tips"
-        ]
-    ),
-    Product(
-        product_id="Java",
-        store_id="hey",
-        title="Java course",
-        description="Try out our updated course in Java and impress your interviewers.",
-        price=25000,
-        features=[
-            "Full algorithms course in Java",
-            "OODP Cheat Sheet",
-            "Design Convention Tips"
-        ]
-    ),
-    Product(
-        product_id="Python",
-        store_id="hey",
-        title="Python course",
-        description="Try out our newest course in Python and impress your interviewers.",
-        price=45000,
-        features=[
-            "Full algorithms course in Python",
-            "Data Structures Cheat Sheet",
-            "List comprehension Tips"
-        ]
-    )
-]
-
-
-current_stores = {
-    example_store: example_store
-}
-
-
-current_products = {}
-for prod in products:
-    current_products[prod] = prod
-
-
 class WebSocketServer(WebSocketServerFactory):
 
     class ServerProtocol(WebSocketServerProtocol):
@@ -135,9 +77,9 @@ class WebSocketServer(WebSocketServerFactory):
             self.__subscribed_clients[enum_pos] = set()
 
         self.__products_counter = 0
-        self.__stores_counter   = 0
+        self.__stores_counter = 0
 
-        #add db client
+        # add db client
         self.db_connect = postgresDBClient()
         
         # add server to asyncio + run until complete
@@ -264,16 +206,6 @@ class WebSocketServer(WebSocketServerFactory):
         if self.__async_server_future:
             self.__async_server_future.close()
 
-    def insert_product(self, product: Product) -> bool:
-        # add support for db here
-        current_products[product] = product
-        return True
-
-    def insert_store(self, store: Store) -> bool:
-        # add support for db here
-        current_stores[store] = store
-        return True
-
     def send_product_update(self, product: Product):
         self.__products_counter += 1
         snapshot_msg = ParamsMessage(id=self.__products_counter, jsonrpc="2.0", method=WSMsgType.update.value,
@@ -294,11 +226,10 @@ class WebSocketServer(WebSocketServerFactory):
         self.__subscribed_clients[sub_type].add(server_protocol)
         if sub_type == DBType.stores:
             msg_counter = self.__stores_counter
-            self.db_connect.update_store(DBType.stores.value)
-            params = [item.__dict__ for item in params]
+            params = [DBType.stores.value, [item.__dict__ for item in self.db_connect.get_stores()]]
         elif sub_type == DBType.products:
             msg_counter = self.__products_counter
-            self.db_connect.update_product(DBType.products.value)
+            params = [DBType.products.value, [item.__dict__ for item in self.db_connect.get_products()]]
         else:
             raise Exception("Unrecognised sub snapshot")
 
