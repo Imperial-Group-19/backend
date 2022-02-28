@@ -16,7 +16,7 @@ from db_objects import Store, Product, FunnelEvent, ALLOWED_EVENTS, FunnelContra
 from db_connection import postgresDBClient
 from message_conversion import MessageConverter
 from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, \
-    WSMsgType, Insert
+    WSMsgType, Update
 from polygon_node_connection import PolygonNodeClient
 
 
@@ -139,14 +139,14 @@ class WebSocketServer(WebSocketServerFactory):
                 enum_sub = DBType[subscription]
                 self.__add_subscriber(enum_sub, subscriber)
 
-        elif isinstance(msg_received, Insert):
+        elif isinstance(msg_received, Update):
             error_msg = ""
             if len(msg_received.params) == 2:
                 if isinstance(msg_received.params[1], dict):
                     if msg_received.params[0] == DBType.products.value:
                         try:
                             product = Product(**msg_received.params[1])
-                            inserted = self.insert_product(product)
+                            inserted = self.update_product(product)
                             self.send_response_msg(server_protocol=subscriber, msg_id=msg_received.id, result=inserted)
                             if inserted:
                                 self.send_product_update(product)
@@ -157,7 +157,7 @@ class WebSocketServer(WebSocketServerFactory):
                     elif msg_received.params[0] == DBType.stores.value:
                         try:
                             store = Store(**msg_received.params[1])
-                            inserted = self.insert_store(store)
+                            inserted = self.update_store(store)
                             self.send_response_msg(server_protocol=subscriber, msg_id=msg_received.id, result=inserted)
                             if inserted:
                                 self.send_store_update(store)
@@ -272,6 +272,14 @@ class WebSocketServer(WebSocketServerFactory):
             self.db_connect.write_payment_made(init_obj)
         elif isinstance(init_obj, RefundMade):
             self.db_connect.write_refund_made(init_obj)
+
+    def update_product(self, product: Product):
+        self.db_connect.products[product] = product
+        return True
+
+    def update_store(self, store: Store):
+        self.db_connect.stores[store] = store
+        return True
 
 
 if __name__ == '__main__':

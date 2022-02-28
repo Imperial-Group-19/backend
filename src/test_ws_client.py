@@ -6,7 +6,7 @@ import asyncio
 from autobahn.asyncio.websocket import WebSocketClientProtocol, \
     WebSocketClientFactory
 
-from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, WSMsgType, Insert
+from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, WSMsgType, Update
 from message_conversion import MessageConverter
 
 from db_objects import Product
@@ -56,7 +56,7 @@ class MyClientProtocol(WebSocketClientProtocol):
                     "Full algorithms course in C#"
                 ]
             )
-            response = Insert(id=10, jsonrpc="2.0", method=WSMsgType.insert.value,
+            response = Update(id=10, jsonrpc="2.0", method=WSMsgType.insert.value,
                               params=[DBType.products.value, new_product.__dict__])
             bytes_msg = message_converter.serialise_message(response)
             self.sendMessage(payload=bytes_msg, isBinary=True)

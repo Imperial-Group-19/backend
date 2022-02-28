@@ -69,6 +69,6 @@ class Subscription(ParamsMessage):
 
 
 @dataclass(init=True, repr=True)
-class Insert(ParamsMessage):
+class Update(ParamsMessage):
     params: List[str]
-    method = "insert"
+    method = "update"
