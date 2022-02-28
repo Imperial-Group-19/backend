@@ -274,11 +274,13 @@ class WebSocketServer(WebSocketServerFactory):
             self.db_connect.write_refund_made(init_obj)
 
     def update_product(self, product: Product):
-        self.db_connect.products[product] = product
+        self.db_connect.update_product[product]
+        # self.db_connect.products[product] = product
         return True
 
     def update_store(self, store: Store):
-        self.db_connect.stores[store] = store
+        self.db_connect.update_store[store]
+        # self.db_connect.stores[store] = store
         return True
 
 

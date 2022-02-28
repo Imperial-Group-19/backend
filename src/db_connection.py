@@ -72,9 +72,9 @@ class postgresDBClient:
         self.cursor.close()
         self.conn.close()
     
-    def get_store_editable(self) -> Dict[Store, Store]:
+    def get_store(self) -> Dict[Store, Store]:
         # Query
-        self.cursor.execute("SELECT id, title, description, store_owner FROM storeseditable ORDER BY id")
+        self.cursor.execute("SELECT id, title, description, store_owner FROM stores ORDER BY id")
         rows = self.cursor.fetchall()
         print("The number of stores: ", self.cursor.rowcount)
         
@@ -86,9 +86,9 @@ class postgresDBClient:
 
         return stores
 
-    def get_product_editable(self) -> Dict[Product, Product]:
+    def get_product(self) -> Dict[Product, Product]:
         # Query
-        self.cursor.execute("SELECT product_id, store_id, title, description, price, features FROM productseditable ORDER BY product_id")
+        self.cursor.execute("SELECT product_id, store_id, title, description, price, features FROM products ORDER BY product_id")
         rows = self.cursor.fetchall()
         print("The number of products: ", self.cursor.rowcount)
         
@@ -131,24 +131,13 @@ class postgresDBClient:
         # Commit changes
         self.conn.commit()
 
-    def add_store_editable(self, store: Store):
-        # Read editable stores table 
-        existing_stores = self.get_store_editable()
-        for current_store in existing_stores:
-            if(store.id == current_store.id):
-                print("Store exists - unable to create store")
-                return
-        # Add store with updated titles and descriptions
-        store_tuple = dataclasses.astuple(store)
-
-        # Insert store details 
-        insert_store = """ INSERT INTO storeseditable (ID, TITLE, DESCRIPTION, STORE_OWNER) VALUES (%s,%s,%s,%s)"""
-
-        self.cursor.execute(insert_store, store_tuple)
+    def update_store(self, store: Store):
+        # Update by store_address
+        self.cursor.execute("UPDATE stores SET title = %s, description = %s WHERE id = %s", (store.title, store.description, store.id))
 
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
-        print(rows_updated, "1 Record inserted successfully into StoresEditable table")
+        print(rows_updated, "1 Record updated in Stores table")
 
         # Commit the changes to the database
         self.conn.commit()
@@ -166,23 +155,12 @@ class postgresDBClient:
 
 
 
-    def add_product_editable(self, product: Product):
+    def update_product(self, product: Product):
         product_list = list(dataclasses.asdict(product).values()) 
         features = self.to_array(product_list[-1])
-        
-        # Read editable products table 
-        existing_products = self.get_product_editable()
-        for current_product in existing_products:
-            if(product.product_id == current_product.product_id):
-                print("Product exists - unable to create product")
-                return
 
-        product_tuple = tuple(product_list)
-
-        # Insert product details 
-        insert_product = """ INSERT INTO productseditable (PRODUCT_ID, STORE_ID, TITLE, DESCRIPTION, PRICE, FEATURES) VALUES (%s,%s,%s,%s,%s,%s)"""
-
-        self.cursor.execute(insert_product, product_tuple)
+        # Update by product_address
+        self.cursor.execute("UPDATE products SET title = %s, description = %s, features = %s WHERE product_id = %s", (product.title, product.description, features, product.product_id))
 
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
