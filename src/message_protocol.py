@@ -12,7 +12,7 @@ class WSMsgType(Enum):
     subscribe    = "subscribe"
     snapshot     = "snapshot"
     update       = "update"
-    insert       = "insert"
+    updateValue  = "updateValue"
 
 
 @dataclass(init=True, repr=True, frozen=True)

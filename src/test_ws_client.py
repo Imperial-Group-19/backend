@@ -9,7 +9,7 @@ from autobahn.asyncio.websocket import WebSocketClientProtocol, \
 from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, WSMsgType, Update
 from message_conversion import MessageConverter
 
-from db_objects import Product
+from db_objects import Product, Store
 
 
 class MyClientProtocol(WebSocketClientProtocol):
@@ -46,6 +46,19 @@ class MyClientProtocol(WebSocketClientProtocol):
 
         if isinstance(msg_received, ResponseMessage) and self.first_time:
             self.first_time = False
+            new_store = Store(
+                id="hey1",
+                title="Super Algorithms Inc.",
+                description="We help you prepare for Tech Interviews.",
+                store_owner="123"
+            )
+
+            response = Update(id=10, jsonrpc="2.0", method=WSMsgType.updateValue.value,
+                              params=[DBType.stores.value, new_store.__dict__])
+            bytes_msg = message_converter.serialise_message(response)
+            print(bytes_msg)
+            self.sendMessage(payload=bytes_msg, isBinary=True)
+
             new_product = Product(
                 product_id="C#",
                 store_id="hey",
@@ -56,9 +69,10 @@ class MyClientProtocol(WebSocketClientProtocol):
                     "Full algorithms course in C#"
                 ]
             )
-            response = Update(id=10, jsonrpc="2.0", method=WSMsgType.insert.value,
+            response = Update(id=10, jsonrpc="2.0", method=WSMsgType.updateValue.value,
                               params=[DBType.products.value, new_product.__dict__])
             bytes_msg = message_converter.serialise_message(response)
+            print(bytes_msg)
             self.sendMessage(payload=bytes_msg, isBinary=True)
 
     def onClose(self, wasClean, code, reason):

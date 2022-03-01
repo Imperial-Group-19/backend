@@ -22,10 +22,8 @@ server = SSHTunnelForwarder(('35.195.58.180', 22),
          allow_agent=False)
 server.start()
 
-# ISSUE: DUPLICATES ARE WRITTEN TO DB BEFORE ERROR THROWN TO SERVER AND SERVER STOPS RUNNING
-
 class postgresDBClient:
-    def __init__(self):
+    def __init__(self, logging):
         # Connection establishment
         self.conn = psycopg2.connect(
             database='salesfunnel',
@@ -48,6 +46,8 @@ class postgresDBClient:
         self.products: Dict[Product, Product] = {}
         self.paymentmade: List[PaymentMade] = [] 
         self.refundmade: List[RefundMade] = []
+
+        self.logging = logging
 
     def connect(self): #testing function
         # Connection establishment
@@ -107,11 +107,16 @@ class postgresDBClient:
         # Insert store details 
         insert_store = """ INSERT INTO stores (ID, TITLE, DESCRIPTION, STORE_OWNER) VALUES (%s,%s,%s,%s)"""
 
-        self.cursor.execute(insert_store, st_tuple)
+        try:
+            self.cursor.execute(insert_store, st_tuple)
+        except Exception as e:
+            error_msg = f"Unable to add new store: Exception: {e}"
+            self.logging.warning(error_msg)
+            return
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record inserted successfully into Stores table")
+        print(count, "Record(s) inserted successfully into Stores table")
 
         # Commit changes
         self.conn.commit()
@@ -122,11 +127,16 @@ class postgresDBClient:
         # Insert product details 
         insert_product = """ INSERT INTO products (PRODUCT_ID, STORE_ID, TITLE, DESCRIPTION, PRICE, FEATURES) VALUES (%s,%s,%s,%s,%s,%s)"""
 
-        self.cursor.execute(insert_product, prdt_tuple)
-
+        try:
+            self.cursor.execute(insert_product, prdt_tuple)
+        except Exception as e:
+            error_msg = f"Unable to add new product: Exception: {e}"
+            self.logging.warning(error_msg)
+            return
+            
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record inserted successfully into Products table")
+        print(count, "Record(s) inserted successfully into Products table")
 
         # Commit changes
         self.conn.commit()
@@ -137,22 +147,21 @@ class postgresDBClient:
 
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
-        print(rows_updated, "1 Record updated in Stores table")
+        print(rows_updated, "Record(s) updated on Stores table")
 
         # Commit the changes to the database
         self.conn.commit()
 
         # Create new store
         new_store = Store(
-            id=store.storeAddress,
+            id=store.id,
             title = store.title,
             description = store.description,
-            store_owner = store.storeOwner,
+            store_owner = store.store_owner,
         )
 
         # Add to dictionary
         self.stores[new_store] = new_store
-
 
 
     def update_product(self, product: Product):
@@ -164,19 +173,19 @@ class postgresDBClient:
 
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
-        print(rows_updated, "1 Record updated on Stores table")
+        print(rows_updated, "Record(s) updated on Products table")
 
         # Commit the changes to the database
         self.conn.commit()
 
          # Create new product
         new_product = Product(
-            product_id = product.productName,
-            store_id = product.storeAddress,
+            product_id = product.product_id,
+            store_id = product.store_id,
             title = product.title,
             description = product.description,
             price = product.price,
-            features = []
+            features = product.features
         )
 
         # Add to dictionary
@@ -191,7 +200,7 @@ class postgresDBClient:
 
         # get the number of updated rows
         rows_deleted = self.cursor.rowcount
-        print(rows_deleted, "Record deleted from Stores table")
+        print(rows_deleted, "Record(s) deleted from Stores table")
 
         # Commit the changes to the database
         self.conn.commit()
@@ -204,7 +213,7 @@ class postgresDBClient:
 
         # get the number of updated rows
         rows_deleted = self.cursor.rowcount
-        print(rows_deleted, "Record deleted from Products table")
+        print(rows_deleted, "Record(s) deleted from Products table")
 
         # Commit the changes to the database
         self.conn.commit()
@@ -219,7 +228,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record inserted successfully into StoreCreated table")
+        print(count, "Record(s) inserted successfully into StoreCreated table")
 
         # Commit changes
         self.conn.commit()
@@ -232,16 +241,12 @@ class postgresDBClient:
             store_owner = store.storeOwner,
         )
 
-        # # Add to dictionary
-        # self.stores[new_store] = new_store
+        # Add to dictionary - NOTE: to remove this when actual data is updated from front end
+        # This should only be in updated_store but required for update/delete functions now
+        self.stores[new_store] = new_store
 
         # Add to uneditable store table in DB
-        try:
-            self.add_stores(new_store)
-        except Exception as e:
-            error_msg = f"Unable to add new store: Exception: {e}"
-            self.logging.warning(error_msg)
-            return
+        self.add_stores(new_store)
 
 
     def write_store_removed(self, store: StoreRemoved): 
@@ -254,12 +259,12 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record inserted successfully into StoreRemoved table")
+        print(count, "Record(s) inserted successfully into StoreRemoved table")
 
         # Commit changes
         self.conn.commit()
 
-        # Remove store from dictionary and DB -> and also remove related products in store                
+        # Remove store from dictionary and DB and also remove related products in store                
         for current_product in self.products:
             if(current_product.store_id == store.storeAddress):
                 self.products.pop(current_product)
@@ -283,7 +288,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record inserted successfully into StoreUpdated table")
+        print(count, "Record(s) inserted successfully into StoreUpdated table")
 
         # Commit changes
         self.conn.commit()
@@ -325,7 +330,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record inserted successfully into ProductCreated table")
+        print(count, "Record(s) inserted successfully into ProductCreated table")
 
         # Commit changes
         self.conn.commit()
@@ -340,16 +345,12 @@ class postgresDBClient:
             features = []
         )
 
-        # # Add to dictionary
-        # self.products[new_product] = new_product
+        # Add to dictionary - NOTE: to remove this when actual data is updated from front end
+        # This should only be in updated_product but required for update/delete functions now
+        self.products[new_product] = new_product
 
         # Add to uneditable product table in DB
-        try:
-            self.add_products(new_product)
-        except Exception as e:
-            error_msg = f"Unable to add new product: Exception: {e}"
-            self.logging.warning(error_msg)
-            return
+        self.add_products(new_product)
 
 
     def write_product_removed(self, product: ProductRemoved): 
@@ -362,7 +363,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record inserted successfully into ProductRemoved table")
+        print(count, "Record(s) inserted successfully into ProductRemoved table")
 
         # Commit changes
         self.conn.commit()
@@ -385,7 +386,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record inserted successfully into ProductUpdated table")
+        print(count, "Record(s) inserted successfully into ProductUpdated table")
 
         # Commit changes
         self.conn.commit()
@@ -429,7 +430,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record inserted successfully into PaymentMade table")
+        print(count, "Record(s) inserted successfully into PaymentMade table")
 
         # Commit changes
         self.conn.commit()
@@ -451,7 +452,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record inserted successfully into RefundMade table")
+        print(count, "Record(s) inserted successfully into RefundMade table")
 
         # Commit changes
         self.conn.commit()
@@ -466,24 +467,30 @@ class postgresDBClient:
         return self.stores.values()
 
 
-if __name__ == "__main__":
-    db = postgresDBClient()
+# if __name__ == "__main__":
+#     import logging
+#     import os 
 
-    # blank_store = Store('0x02b7433ea4f93554856aa657da1494b2bf645ef0', " ", 
-    #                 " ", 
-    #                 '0x599410057bc933fd2f7319a5a835c88a9300bfb0')
+#     log_file = os.path.join("middle-tier-service.log")
+#     logging.basicConfig(filename=log_file, level=logging.DEBUG)
+
+#     db = postgresDBClient(logging)
+
+#     blank_store = Store('hey1', " ", 
+#                     " ", 
+#                     '123')
     
-    # new_store = Store('0x02b7433ea4f93554856aa657da1494b2bf645ef0', "Super Algorithms Inc.", 
+    # new_store = Store('hey', "Super Algorithms Inc.", 
     #                   "We help you prepare for Tech Interviews", 
     #                   '0x599410057bc933fd2f7319a5a835c88a9300bfb0')
-    # # db.add_stores(blank_store)
+    # db.add_stores(blank_store)
     # db.update_store(new_store)
     # db_stores = db.get_store()
     # print(db_stores)
 
 
-    # blank_product = Product("C++", "0x02b7433ea4f93554856aa657da1494b2bf645ef0", " ", 
-    #                         " ", 10000,
+    # blank_product = Product("C#", "hey", " ", 
+    #                         " ", 45000,
     #                         [])
 
     # new_product = Product("C++", "super-algorithms", "C++ course", 
@@ -491,7 +498,7 @@ if __name__ == "__main__":
     #                     ["Full algorithms course in C++",
     #                     "Pointers Cheat Sheet",
     #                     "Memory Management Tips"])
-    # # db.add_products(blank_product)
+    # db.add_products(blank_product)
     # db.update_product(new_product)
     # db_products = db.get_product()
     # print(db_products)

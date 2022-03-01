@@ -80,7 +80,7 @@ class WebSocketServer(WebSocketServerFactory):
         self.__stores_counter = 0
 
         # add db client
-        self.db_connect = postgresDBClient()
+        self.db_connect = postgresDBClient(self.logging)
         
         # add server to asyncio + run until complete
         self.server = self.event_loop.create_server(protocol_factory=self,
@@ -153,6 +153,7 @@ class WebSocketServer(WebSocketServerFactory):
                             return
                         except Exception as e:
                             error_msg = "Wrong keys/value types for product item"
+                            self.logging.exception(e)
 
                     elif msg_received.params[0] == DBType.stores.value:
                         try:
@@ -164,6 +165,7 @@ class WebSocketServer(WebSocketServerFactory):
                             return
                         except Exception as e:
                             error_msg = "Wrong keys/value types for store item"
+                            self.logging.exception(e)
 
                     else:
                         error_msg = "No such db object!"
@@ -274,12 +276,12 @@ class WebSocketServer(WebSocketServerFactory):
             self.db_connect.write_refund_made(init_obj)
 
     def update_product(self, product: Product):
-        self.db_connect.update_product[product]
+        self.db_connect.update_product(product)
         # self.db_connect.products[product] = product
         return True
 
     def update_store(self, store: Store):
-        self.db_connect.update_store[store]
+        self.db_connect.update_store(store)
         # self.db_connect.stores[store] = store
         return True
 
