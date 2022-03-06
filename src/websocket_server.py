@@ -19,6 +19,8 @@ from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, Er
     WSMsgType, Update
 from polygon_node_connection import PolygonNodeClient
 
+from sshtunnel import SSHTunnelForwarder
+from getpass import getpass
 
 class WebSocketServer(WebSocketServerFactory):
 
@@ -295,7 +297,23 @@ if __name__ == '__main__':
     parser.add_argument("--log", help="log folder destination", type=str, action='store', dest='log_dir', required=True)
     parser.add_argument("--log-level", help="logging level", type=str,
                         choices=["DEBUG", "INFO", "WARNING", "CRITICAL"], action='store', dest='log_level', required=True)
+    parser.add_argument("--is-prod", help="is production server", type=bool, action='store', dest='is_prod', required=True)
     args = parser.parse_args()
+
+    if not args.is_prod:  
+        username = input("Enter SSH username: ")
+        pkey = input("Enter SSH private key: ")
+        pw = getpass(prompt = 'Enter SSH private key password: ')
+
+        PORT = 5432
+        server = SSHTunnelForwarder(('35.195.58.180', 22),
+                ssh_username= username,
+                ssh_pkey = pkey, 
+                ssh_private_key_password= pw,
+                remote_bind_address=('localhost', PORT),
+                local_bind_address=('localhost', PORT),
+                allow_agent=False)
+        server.start()
 
     log_file = os.path.join(args.log_dir, "middle-tier-service.log")
     logging.basicConfig(filename=log_file, level=logging.DEBUG)

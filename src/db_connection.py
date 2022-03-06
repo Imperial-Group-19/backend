@@ -3,24 +3,7 @@ import dataclasses
 import psycopg2
 from db_objects import Store, User, Transaction, Product, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, ProductCreated, ProductRemoved, ProductUpdated
 
-from sshtunnel import SSHTunnelForwarder
-from getpass import getpass
-
 from logging import Logger
-
-username = input("Enter SSH username: ")
-pkey = input("Enter SSH private key: ")
-pw = getpass(prompt = 'Enter SSH private key password: ')
-
-PORT = 5432
-server = SSHTunnelForwarder(('35.195.58.180', 22),
-         ssh_username= username,
-         ssh_pkey = pkey, 
-         ssh_private_key_password= pw,
-         remote_bind_address=('localhost', PORT),
-         local_bind_address=('localhost', PORT),
-         allow_agent=False)
-server.start()
 
 class postgresDBClient:
     def __init__(self, logging):
