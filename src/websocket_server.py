@@ -297,10 +297,11 @@ if __name__ == '__main__':
     parser.add_argument("--log", help="log folder destination", type=str, action='store', dest='log_dir', required=True)
     parser.add_argument("--log-level", help="logging level", type=str,
                         choices=["DEBUG", "INFO", "WARNING", "CRITICAL"], action='store', dest='log_level', required=True)
-    parser.add_argument("--is-prod", help="is production server", type=bool, action='store', dest='is_prod', required=True)
+    parser.add_argument("--is-prod", help="is production server", type = str, 
+                        choices=['True', 'False'], action='store', dest='is_prod')
     args = parser.parse_args()
 
-    if not args.is_prod:  
+    if args.is_prod == 'False':  
         username = input("Enter SSH username: ")
         pkey = input("Enter SSH private key: ")
         pw = getpass(prompt = 'Enter SSH private key password: ')
