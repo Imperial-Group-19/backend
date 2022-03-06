@@ -12,69 +12,12 @@ import ujson
 from autobahn.asyncio.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from autobahn.websocket.protocol import ConnectionRequest, WebSocketProtocol
 
-from db_objects import Store, Product, FunnelEvent, ALLOWED_EVENTS, FunnelContractEvent
+from db_objects import Store, Product, FunnelEvent, ALLOWED_EVENTS, FunnelContractEvent, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, ProductCreated, ProductRemoved, ProductUpdated
+from db_connection import postgresDBClient
 from message_conversion import MessageConverter
 from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, \
-    WSMsgType, Insert
+    WSMsgType, Update
 from polygon_node_connection import PolygonNodeClient
-
-
-example_store = Store(
-    id="hey",
-    title="hey sup",
-    description="describe hey sup",
-    wallet_address="0x329CdCBBD82c934fe32322b423bD8fBd30b4EEB6"
-)
-
-
-products = [
-    Product(
-        product_id="C++",
-        store_id="hey",
-        title="C++ course",
-        description="Try out our original course in C++ and impress your interviewers.",
-        price=35000,
-        features=[
-            "Full algorithms course in C++",
-            "Pointers Cheat Sheet",
-            "Memory Management Tips"
-        ]
-    ),
-    Product(
-        product_id="Java",
-        store_id="hey",
-        title="Java course",
-        description="Try out our updated course in Java and impress your interviewers.",
-        price=25000,
-        features=[
-            "Full algorithms course in Java",
-            "OODP Cheat Sheet",
-            "Design Convention Tips"
-        ]
-    ),
-    Product(
-        product_id="Python",
-        store_id="hey",
-        title="Python course",
-        description="Try out our newest course in Python and impress your interviewers.",
-        price=45000,
-        features=[
-            "Full algorithms course in Python",
-            "Data Structures Cheat Sheet",
-            "List comprehension Tips"
-        ]
-    )
-]
-
-
-current_stores = {
-    example_store: example_store
-}
-
-
-current_products = {}
-for prod in products:
-    current_products[prod] = prod
 
 
 class WebSocketServer(WebSocketServerFactory):
@@ -134,8 +77,11 @@ class WebSocketServer(WebSocketServerFactory):
             self.__subscribed_clients[enum_pos] = set()
 
         self.__products_counter = 0
-        self.__stores_counter   = 0
+        self.__stores_counter = 0
 
+        # add db client
+        self.db_connect = postgresDBClient(self.logging)
+        
         # add server to asyncio + run until complete
         self.server = self.event_loop.create_server(protocol_factory=self,
                                                     host="", port=self.port)
@@ -193,31 +139,33 @@ class WebSocketServer(WebSocketServerFactory):
                 enum_sub = DBType[subscription]
                 self.__add_subscriber(enum_sub, subscriber)
 
-        elif isinstance(msg_received, Insert):
+        elif isinstance(msg_received, Update):
             error_msg = ""
             if len(msg_received.params) == 2:
                 if isinstance(msg_received.params[1], dict):
                     if msg_received.params[0] == DBType.products.value:
                         try:
                             product = Product(**msg_received.params[1])
-                            inserted = self.insert_product(product)
+                            inserted = self.update_product(product)
                             self.send_response_msg(server_protocol=subscriber, msg_id=msg_received.id, result=inserted)
                             if inserted:
                                 self.send_product_update(product)
                             return
                         except Exception as e:
                             error_msg = "Wrong keys/value types for product item"
+                            self.logging.exception(e)
 
                     elif msg_received.params[0] == DBType.stores.value:
                         try:
                             store = Store(**msg_received.params[1])
-                            inserted = self.insert_store(store)
+                            inserted = self.update_store(store)
                             self.send_response_msg(server_protocol=subscriber, msg_id=msg_received.id, result=inserted)
                             if inserted:
                                 self.send_store_update(store)
                             return
                         except Exception as e:
                             error_msg = "Wrong keys/value types for store item"
+                            self.logging.exception(e)
 
                     else:
                         error_msg = "No such db object!"
@@ -260,16 +208,6 @@ class WebSocketServer(WebSocketServerFactory):
         if self.__async_server_future:
             self.__async_server_future.close()
 
-    def insert_product(self, product: Product) -> bool:
-        # add support for db here
-        current_products[product] = product
-        return True
-
-    def insert_store(self, store: Store) -> bool:
-        # add support for db here
-        current_stores[store] = store
-        return True
-
     def send_product_update(self, product: Product):
         self.__products_counter += 1
         snapshot_msg = ParamsMessage(id=self.__products_counter, jsonrpc="2.0", method=WSMsgType.update.value,
@@ -290,10 +228,10 @@ class WebSocketServer(WebSocketServerFactory):
         self.__subscribed_clients[sub_type].add(server_protocol)
         if sub_type == DBType.stores:
             msg_counter = self.__stores_counter
-            params = [DBType.stores.value, [item.__dict__ for item in current_stores.values()]]
+            params = [DBType.stores.value, [item.__dict__ for item in self.db_connect.get_stores()]]
         elif sub_type == DBType.products:
             msg_counter = self.__products_counter
-            params = [DBType.products.value, [item.__dict__ for item in current_products.values()]]
+            params = [DBType.products.value, [item.__dict__ for item in self.db_connect.get_products()]]
         else:
             raise Exception("Unrecognised sub snapshot")
 
@@ -316,6 +254,36 @@ class WebSocketServer(WebSocketServerFactory):
                 cls_obj_data.update(extra_data)
                 init_obj = cls_obj(**cls_obj_data)
                 self.logging.warning(init_obj)
+                # add write feature to DB
+                self.write_db(init_obj)
+
+    def write_db(self, init_obj):
+        if isinstance(init_obj, StoreCreated):
+            self.db_connect.write_store_created(init_obj)
+        elif isinstance(init_obj, StoreRemoved):
+            self.db_connect.write_store_removed(init_obj)
+        elif isinstance(init_obj, StoreUpdated):
+            self.db_connect.write_store_updated(init_obj)
+        elif isinstance(init_obj, ProductCreated):
+            self.db_connect.write_product_created(init_obj)
+        elif isinstance(init_obj, ProductRemoved):
+            self.db_connect.write_product_removed(init_obj)
+        elif isinstance(init_obj, ProductUpdated):
+            self.db_connect.write_product_updated(init_obj)
+        elif isinstance(init_obj, PaymentMade):
+            self.db_connect.write_payment_made(init_obj)
+        elif isinstance(init_obj, RefundMade):
+            self.db_connect.write_refund_made(init_obj)
+
+    def update_product(self, product: Product):
+        self.db_connect.update_product(product)
+        # self.db_connect.products[product] = product
+        return True
+
+    def update_store(self, store: Store):
+        self.db_connect.update_store(store)
+        # self.db_connect.stores[store] = store
+        return True
 
 
 if __name__ == '__main__':

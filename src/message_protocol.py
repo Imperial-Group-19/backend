@@ -12,7 +12,7 @@ class WSMsgType(Enum):
     subscribe    = "subscribe"
     snapshot     = "snapshot"
     update       = "update"
-    insert       = "insert"
+    updateValue  = "updateValue"
 
 
 @dataclass(init=True, repr=True, frozen=True)
@@ -69,6 +69,6 @@ class Subscription(ParamsMessage):
 
 
 @dataclass(init=True, repr=True)
-class Insert(ParamsMessage):
+class Update(ParamsMessage):
     params: List[str]
-    method = "insert"
+    method = "update"
