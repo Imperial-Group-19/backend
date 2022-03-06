@@ -38,8 +38,10 @@ class postgresDBClient:
         # Creating a cursor object
         self.cursor= self.conn.cursor()
 
-        # Print when connection is successful
-        print("Database has been connected successfully !!");
+        self.logging = logging
+
+        # self.logging.info when connection is successful
+        self.logging.info("Database has been connected successfully !!");
 
         # Initialise stores, products, transactions
         self.stores: Dict[Store, Store] = {}
@@ -47,8 +49,7 @@ class postgresDBClient:
         self.paymentmade: List[PaymentMade] = [] 
         self.refundmade: List[RefundMade] = []
 
-        self.logging = logging
-
+        
     def connect(self): #testing function
         # Connection establishment
         self.conn = psycopg2.connect(
@@ -64,8 +65,8 @@ class postgresDBClient:
         # Creating a cursor object
         self.cursor = self.conn.cursor()
 
-        # Print when connection is successful
-        print("Database has been connected successfully !!");
+        # self.logging.info when connection is successful
+        self.logging.info("Database has been connected successfully !!");
 
     def close_connection(self): 
         # Closing the connection
@@ -76,7 +77,7 @@ class postgresDBClient:
         # Query
         self.cursor.execute("SELECT id, title, description, store_owner FROM stores ORDER BY id")
         rows = self.cursor.fetchall()
-        print("The number of stores: ", self.cursor.rowcount)
+        self.logging.info(f"The number of stores: {self.cursor.rowcount}", )
         
         stores = {} #use hash as dict key
         
@@ -90,7 +91,7 @@ class postgresDBClient:
         # Query
         self.cursor.execute("SELECT product_id, store_id, title, description, price, features FROM products ORDER BY product_id")
         rows = self.cursor.fetchall()
-        print("The number of products: ", self.cursor.rowcount)
+        self.logging.info(f"The number of products: {self.cursor.rowcount}")
         
         products = {} #use store hash and product hash as dict key
 
@@ -116,7 +117,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record(s) inserted successfully into Stores table")
+        self.logging.info(f"{count} Record(s) inserted successfully into Stores table")
 
         # Commit changes
         self.conn.commit()
@@ -136,18 +137,23 @@ class postgresDBClient:
             
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record(s) inserted successfully into Products table")
+        self.logging.info(f"{count} Record(s) inserted successfully into Products table")
 
         # Commit changes
         self.conn.commit()
 
     def update_store(self, store: Store):
-        # Update by store_address
-        self.cursor.execute("UPDATE stores SET title = %s, description = %s WHERE id = %s", (store.title, store.description, store.id))
+        try:
+            # Update by store_address
+            self.cursor.execute("UPDATE stores SET title = %s, description = %s WHERE id = %s", (store.title, store.description, store.id))
+        except Exception as e:
+            error_msg = f"Unable to update store: Exception: {e}"
+            self.logging.warning(error_msg)
+            return
 
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
-        print(rows_updated, "Record(s) updated on Stores table")
+        self.logging.info(f"{rows_updated} Record(s) updated on Stores table")
 
         # Commit the changes to the database
         self.conn.commit()
@@ -168,12 +174,17 @@ class postgresDBClient:
         product_list = list(dataclasses.asdict(product).values()) 
         features = self.to_array(product_list[-1])
 
-        # Update by product_address
-        self.cursor.execute("UPDATE products SET title = %s, description = %s, features = %s WHERE product_id = %s", (product.title, product.description, features, product.product_id))
+        try:
+            # Update by product_address
+            self.cursor.execute("UPDATE products SET title = %s, description = %s, features = %s WHERE product_id = %s", (product.title, product.description, features, product.product_id))
+        except Exception as e:
+            error_msg = f"Unable to update product: Exception: {e}"
+            self.logging.warning(error_msg)
+            return
 
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
-        print(rows_updated, "Record(s) updated on Products table")
+        self.logging.info(f" {rows_updated} Record(s) updated on Products table")
 
         # Commit the changes to the database
         self.conn.commit()
@@ -200,7 +211,7 @@ class postgresDBClient:
 
         # get the number of updated rows
         rows_deleted = self.cursor.rowcount
-        print(rows_deleted, "Record(s) deleted from Stores table")
+        self.logging.info(f"{rows_deleted} Record(s) deleted from Stores table")
 
         # Commit the changes to the database
         self.conn.commit()
@@ -213,7 +224,7 @@ class postgresDBClient:
 
         # get the number of updated rows
         rows_deleted = self.cursor.rowcount
-        print(rows_deleted, "Record(s) deleted from Products table")
+        self.logging.info(f" {rows_deleted} Record(s) deleted from Products table")
 
         # Commit the changes to the database
         self.conn.commit()
@@ -228,7 +239,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record(s) inserted successfully into StoreCreated table")
+        self.logging.info(f"{count} Record(s) inserted successfully into StoreCreated table")
 
         # Commit changes
         self.conn.commit()
@@ -259,7 +270,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record(s) inserted successfully into StoreRemoved table")
+        self.logging.info(f"{count} Record(s) inserted successfully into StoreRemoved table")
 
         # Commit changes
         self.conn.commit()
@@ -288,7 +299,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record(s) inserted successfully into StoreUpdated table")
+        self.logging.info(f"{count} Record(s) inserted successfully into StoreUpdated table")
 
         # Commit changes
         self.conn.commit()
@@ -330,7 +341,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record(s) inserted successfully into ProductCreated table")
+        self.logging.info(f"{count} Record(s) inserted successfully into ProductCreated table")
 
         # Commit changes
         self.conn.commit()
@@ -363,7 +374,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record(s) inserted successfully into ProductRemoved table")
+        self.logging.info(f"{count} Record(s) inserted successfully into ProductRemoved table")
 
         # Commit changes
         self.conn.commit()
@@ -386,7 +397,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record(s) inserted successfully into ProductUpdated table")
+        self.logging.info(f"{count} Record(s) inserted successfully into ProductUpdated table")
 
         # Commit changes
         self.conn.commit()
@@ -430,7 +441,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record(s) inserted successfully into PaymentMade table")
+        self.logging.info(f"{count} Record(s) inserted successfully into PaymentMade table")
 
         # Commit changes
         self.conn.commit()
@@ -452,7 +463,7 @@ class postgresDBClient:
 
         # Check insertion
         count = self.cursor.rowcount
-        print(count, "Record(s) inserted successfully into RefundMade table")
+        self.logging.info(f"{count} Record(s) inserted successfully into RefundMade table")
 
         # Commit changes
         self.conn.commit()
@@ -486,7 +497,7 @@ class postgresDBClient:
     # db.add_stores(blank_store)
     # db.update_store(new_store)
     # db_stores = db.get_store()
-    # print(db_stores)
+    # self.logging.info(db_stores)
 
 
     # blank_product = Product("C#", "hey", " ", 
@@ -501,4 +512,4 @@ class postgresDBClient:
     # db.add_products(blank_product)
     # db.update_product(new_product)
     # db_products = db.get_product()
-    # print(db_products)
+    # self.logging.info(db_products)
