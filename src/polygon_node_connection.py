@@ -50,7 +50,7 @@ class PolygonNodeClient:
             raise Exception(f"Failed to fetch latest block!")
 
         end_block = self.__start_block + 1000
-        self.__logging.warning(f"Entering catch up phase: {self.__start_block=} -->> {latest_block=}")
+        self.__logging.warning(f"Entering catch up phase: {self.__start_block} -->> {latest_block}")
         while end_block < latest_block:
             all_event_outputs = []
             for event in self.get_events():
@@ -68,7 +68,7 @@ class PolygonNodeClient:
             self.__start_block = end_block
             end_block = self.__start_block + self.__max_block_increase
 
-        self.__logging.warning(f"Entering in line phase: {self.__start_block=} -->> {latest_block=}")
+        self.__logging.warning(f"Entering in line phase: {self.__start_block} -->> {latest_block}")
         while True:
             latest_block = await self.fetch_latest_block()
             if latest_block is None:
@@ -109,7 +109,7 @@ class PolygonNodeClient:
                 else:
                     raise Exception(f"Received error message: {response}")
             except Exception as e:
-                self.__logging.warning(f"Failed to fetch latest block: {e=}")
+                self.__logging.warning(f"Failed to fetch latest block: {e}")
                 counter += 1
                 await asyncio.sleep(5)
 
@@ -149,7 +149,7 @@ class PolygonNodeClient:
             else:
                 raise Exception(f"Received error message: {response}")
         except Exception as e:
-            self.__logging.warning(f"Raised exception whilst fetching event: {event=}, {from_block=}, {to_block=}, {e=}")
+            self.__logging.warning(f"Raised exception whilst fetching event: {event}, {from_block}, {to_block}, {e}")
             return False, []
 
         output_result = []
