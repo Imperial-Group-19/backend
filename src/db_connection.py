@@ -24,7 +24,7 @@ class postgresDBClient:
         self.logging = logging
 
         # self.logging.info when connection is successful
-        self.logging.info("Database has been connected successfully !!");
+        self.logging.info("Database has been connected successfully !!")
 
         # Initialise stores, products, transactions
         self.stores: Dict[Store, Store] = {}
@@ -49,7 +49,7 @@ class postgresDBClient:
         self.cursor = self.conn.cursor()
 
         # self.logging.info when connection is successful
-        self.logging.info("Database has been connected successfully !!");
+        self.logging.info("Database has been connected successfully !!")
 
     def close_connection(self): 
         # Closing the connection

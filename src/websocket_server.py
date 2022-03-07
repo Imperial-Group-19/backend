@@ -5,22 +5,23 @@
 import argparse
 import asyncio
 import dataclasses
+from getpass import getpass
 from logging import Logger
 from typing import Union, Dict, List
 
 import ujson
 from autobahn.asyncio.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from autobahn.websocket.protocol import ConnectionRequest, WebSocketProtocol
+from sshtunnel import SSHTunnelForwarder
 
-from db_objects import Store, Product, FunnelEvent, ALLOWED_EVENTS, FunnelContractEvent, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, ProductCreated, ProductRemoved, ProductUpdated
 from db_connection import postgresDBClient
+from db_objects import Store, Product, ALLOWED_EVENTS, FunnelContractEvent, StoreCreated, StoreRemoved, StoreUpdated, \
+    PaymentMade, RefundMade, ProductCreated, ProductRemoved, ProductUpdated
 from message_conversion import MessageConverter
 from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, \
     WSMsgType, Update
 from polygon_node_connection import PolygonNodeClient
 
-from sshtunnel import SSHTunnelForwarder
-from getpass import getpass
 
 class WebSocketServer(WebSocketServerFactory):
 
@@ -43,7 +44,7 @@ class WebSocketServer(WebSocketServerFactory):
             self.factory.process_msg(payload, self)
 
         def onClose(self, was_clean: bool, code: int, reason: str):
-            self.factory.logging.warning(f"Client disconnecting: {self.__request.peer}: {was_clean=}, {code=}, {reason=}")
+            self.factory.logging.warning(f"Client disconnecting: {self.__request.peer}: {was_clean}, {code}, {reason}")
             self.factory.remove_remote_client(self)
 
         def send_msg(self, data: bytes):
