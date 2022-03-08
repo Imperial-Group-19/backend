@@ -132,12 +132,18 @@ class StoreRemoved(FunnelEvent):
 class StoreUpdated(FunnelEvent):
     storeAddress: str
     newStoreAddress: str
-    # storeOwner: str
+    newStoreOwner: str
 
 @dataclass(init=True, repr = True)
 class AffiliateRegistered(FunnelEvent):
     storeAddress: str
     affiliateAddress: str
+
+
+@dataclass(init=True, repr = True)
+class OwnershipTransferred(FunnelEvent):
+    previousOwner: str
+    newOwner: str
 
 
 ALLOWED_EVENTS = {
@@ -149,5 +155,6 @@ ALLOWED_EVENTS = {
     "RefundMade"    : RefundMade,
     "StoreRemoved"  : StoreRemoved,
     "StoreUpdated"  : StoreUpdated,
-    "AffiliateRegistered": AffiliateRegistered
+    "AffiliateRegistered": AffiliateRegistered,
+    "OwnershipTransferred": OwnershipTransferred
 }

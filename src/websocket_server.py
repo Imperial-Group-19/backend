@@ -84,16 +84,16 @@ class WebSocketServer(WebSocketServerFactory):
 
         # add db client
         self.db_connect = postgresDBClient(self.logging)
-        
+
         # add server to asyncio + run until complete
         self.server = self.event_loop.create_server(protocol_factory=self,
                                                     host="", port=self.port)
         self.__async_server_future = self.event_loop.run_until_complete(self.server)
         self.__polygon_node_connection = PolygonNodeClient(event_loop=self.event_loop, logger=self.logging,
                                                            https_url="https://rpc-mumbai.maticvigil.com",
-                                                           contract_address="0xaE7b635D1C9832Ee9c4ede4C5b261c61b79BD728",
+                                                           contract_address="0xF9cc7D93484Cf2C64e2892d332F820495D2BDC2e",
                                                            contract_abi_file="funnel_abi.json",
-                                                           start_block=24934959)
+                                                           start_block=25418911)
 
         self.__polygon_node_connection.register_event_callback("ws_server", self.process_contract_events)
 
@@ -298,23 +298,25 @@ if __name__ == '__main__':
     parser.add_argument("--log", help="log folder destination", type=str, action='store', dest='log_dir', required=True)
     parser.add_argument("--log-level", help="logging level", type=str,
                         choices=["DEBUG", "INFO", "WARNING", "CRITICAL"], action='store', dest='log_level', required=True)
-    parser.add_argument("--is-prod", help="is production server", type = str, 
+    parser.add_argument("--is-prod", help="is production server", type = str,
                         choices=['True', 'False'], action='store', dest='is_prod')
     args = parser.parse_args()
 
-    if args.is_prod == 'False':  
+    if args.is_prod == 'False':
         username = input("Enter SSH username: ")
         pkey = input("Enter SSH private key: ")
         pw = getpass(prompt = 'Enter SSH private key password: ')
 
         PORT = 5432
-        server = SSHTunnelForwarder(('35.195.58.180', 22),
-                ssh_username= username,
-                ssh_pkey = pkey, 
-                ssh_private_key_password= pw,
-                remote_bind_address=('localhost', PORT),
-                local_bind_address=('localhost', PORT),
-                allow_agent=False)
+        server = SSHTunnelForwarder(
+            ('35.195.58.180', 22),
+            ssh_username=username,
+            ssh_pkey = pkey,
+            ssh_private_key_password= pw,
+            remote_bind_address=('localhost', PORT),
+            local_bind_address=('localhost', PORT),
+            allow_agent=False
+        )
         server.start()
 
     log_file = os.path.join(args.log_dir, "middle-tier-service.log")

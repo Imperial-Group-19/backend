@@ -191,10 +191,13 @@ if __name__ == "__main__":
     polygon = PolygonNodeClient(
         event_loop=loop,
         logger=logging, https_url="https://rpc-mumbai.maticvigil.com",
-        contract_address="0xaE7b635D1C9832Ee9c4ede4C5b261c61b79BD728",
+        contract_address="0xF9cc7D93484Cf2C64e2892d332F820495D2BDC2e",
         contract_abi_file="funnel_abi.json",
         start_block=24934959
     )
+
+    for event in polygon.get_events():
+        print(event)
 
     def dummy_callback(event):
         print(event)
