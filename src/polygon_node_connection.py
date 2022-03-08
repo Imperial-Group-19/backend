@@ -74,6 +74,9 @@ class PolygonNodeClient:
             if latest_block is None:
                 raise Exception(f"Failed to fetch latest block!")
 
+            max_block_val = self.__start_block + 1000
+            latest_block = min(latest_block, max_block_val)
+
             all_event_outputs = []
             for event in self.get_events():
                 valid_output, event_outputs = await self.fetch_event(event=event, from_block=self.__start_block, to_block=latest_block)
