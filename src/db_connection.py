@@ -5,6 +5,10 @@ from db_objects import Store, User, Transaction, Product, StoreCreated, StoreRem
 
 from logging import Logger
 
+# 1. Try-catch statement at all insert statements
+# 2. StoreUpdated / OwnershipTransferred/ ProductCreated
+
+
 class postgresDBClient:
     def __init__(self, logging):
         # Connection establishment
@@ -96,7 +100,7 @@ class postgresDBClient:
         except Exception as e:
             error_msg = f"Unable to add new store: Exception: {e}"
             self.logging.warning(error_msg)
-            return
+        
 
         # Check insertion
         count = self.cursor.rowcount
@@ -116,7 +120,7 @@ class postgresDBClient:
         except Exception as e:
             error_msg = f"Unable to add new product: Exception: {e}"
             self.logging.warning(error_msg)
-            return
+        
             
         # Check insertion
         count = self.cursor.rowcount
@@ -132,7 +136,7 @@ class postgresDBClient:
         except Exception as e:
             error_msg = f"Unable to update store: Exception: {e}"
             self.logging.warning(error_msg)
-            return
+        
 
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
@@ -163,7 +167,7 @@ class postgresDBClient:
         except Exception as e:
             error_msg = f"Unable to update product: Exception: {e}"
             self.logging.warning(error_msg)
-            return
+        
 
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
