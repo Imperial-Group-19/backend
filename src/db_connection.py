@@ -108,13 +108,13 @@ class postgresDBClient:
             return store
         
         else:
-            self.cursor.execute("SELECT title, description, store_owner FROM stores WHERE id = %s", (store_id, ))
+            self.cursor.execute("SELECT title, description FROM stores WHERE id = %s", (store_id, ))
             self.logging.info(f"{self.cursor.rowcount} dynamic fields of store retrieved", )
             
             row = self.cursor.fetchone()
-            (title, description, store_owner) = row
+            (title, description) = row
 
-            return title, description, store_owner #TODO: to remove storeOwner for new smartcontract
+            return title, description
 
 
     def get_products_db(self, product_id, store_id, dynamic = False):
@@ -422,14 +422,15 @@ class postgresDBClient:
         # Check if non-updated store exists in db and update store  
         elif self.check_stores(store.storeAddress):
             self.logging.info(f"{store.storeAddress} id: non-updated store exists")
-            existing_title, existing_description, existing_store_owner = self.get_stores_db(store.storeAddress, dynamic = True) #TODO: to remove storeOwner for new smartcontract
+            existing_title, existing_description = self.get_stores_db(store.storeAddress, dynamic = True)
 
             # Create new store
+            # NOTE: This is already updated for new smart contract
             new_store = Store(
                 id=store.newStoreAddress,
                 title=existing_title,
                 description = existing_description,
-                store_owner = existing_store_owner, #TODO: to update to newStoreOwner for new smartcontract
+                store_owner = store.newStoreOwner
             )
 
             # NOTE: All products tied to previous store have been deleted and updated store is empty
@@ -651,7 +652,7 @@ class postgresDBClient:
     #         # Add to dynamic affiliate table in DB
     #         self.add_affiliates(new_affiliate)
 
-    # TODO: uncomment and test for new smart contract
+    # TODO: uncomment and test for new smart contract - NOTE: no actions taken except to record event in db
     # def write_ownership_transferred(self, store: OwnershipTransferred): 
     #     store_tuple = dataclasses.astuple(store)
 
@@ -666,46 +667,6 @@ class postgresDBClient:
 
     #     # Commit changes
     #     self.conn.commit()
-
-        # Update store with new owner - TODO: Edit code below -- might need to update check_stores to include storeOwner check
-        # # Check if updated store exists in db and add existing store to dictionary 
-        # if self.check_stores(store.newStoreAddress):
-        #     existing_updated_store = self.get_stores_db(store.newStoreAddress)
-        #     self.stores[existing_updated_store] = existing_updated_store
-        #     self.logging.info(f"{store.newStoreAddress} id: updated store exists")
-
-        # # Check if non-updated store exists in db and update store  
-        # elif self.check_stores(store.storeAddress):
-        #     self.logging.info(f"{store.storeAddress} id: non-updated store exists")
-        #     existing_title, existing_description, existing_store_owner = self.get_stores_db(store.storeAddress, dynamic = True) #TODO: to remove storeOwner for new smartcontract
-
-        #     # Create new store
-        #     new_store = Store(
-        #         id=store.newStoreAddress,
-        #         title=existing_title,
-        #         description = existing_description,
-        #         store_owner = existing_store_owner, #TODO: to update to newStoreOwner for new smartcontract
-        #     )
-
-        #     # NOTE: All products tied to previous store have been deleted and updated store is empty
-        #     for current_product in self.products:
-        #         if(current_product.store_id == store.storeAddress):
-        #             self.products.pop(current_product)
-        #             self.delete_products(current_product)
-        #             break 
-
-        #     for current_store in self.stores:
-        #         if(current_store.id == store.storeAddress):
-        #             self.stores.pop(current_store)
-        #             self.delete_stores(current_store) 
-        #             break
-
-        #     self.stores[new_store] = new_store
-        #     self.add_stores(new_store)
-
-        
-        # else:
-        #     self.logging.info(f"{store.storeAddress} id: store does not exist. To add store first.")
 
 
     def get_products(self):
