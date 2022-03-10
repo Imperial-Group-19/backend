@@ -5,9 +5,7 @@ from db_objects import Store, User, Transaction, Product, StoreCreated, StoreRem
 
 from logging import Logger
 
-# 1. Try-catch statement at all insert statements
-# 2. StoreUpdated / OwnershipTransferred/ ProductCreated
-
+# TODO: For affiliates - StoreUpdated / OwnershipTransferred/ ProductCreated
 
 class postgresDBClient:
     def __init__(self, logging):
@@ -60,34 +58,43 @@ class postgresDBClient:
         self.cursor.close()
         self.conn.close()
     
-    def get_store(self) -> Dict[Store, Store]:
+    def check_stores(self, store_id):
         # Query
-        self.cursor.execute("SELECT id, title, description, store_owner FROM stores ORDER BY id")
-        rows = self.cursor.fetchall()
-        self.logging.info(f"The number of stores: {self.cursor.rowcount}", )
-        
-        stores = {} #use hash as dict key
-        
-        for row in rows:
-            store = Store(*row)
-            stores[store] = store
+        self.cursor.execute("SELECT id FROM stores WHERE id = %s", (store_id, ))
+        self.logging.info(f"The number of existing stores: {self.cursor.rowcount}", )
 
-        return stores
+        # return boolean
+        return self.cursor.rowcount > 0
 
-    def get_product(self) -> Dict[Product, Product]:
+    def check_products(self, product_id):
         # Query
-        self.cursor.execute("SELECT product_id, store_id, title, description, price, features FROM products ORDER BY product_id")
-        rows = self.cursor.fetchall()
-        self.logging.info(f"The number of products: {self.cursor.rowcount}")
+        self.cursor.execute("SELECT product_id FROM products WHERE product_id = %s", (product_id, ))
+        self.logging.info(f"The number of existing products: {self.cursor.rowcount}")
         
-        products = {} #use store hash and product hash as dict key
+        # return boolean
+        return self.cursor.rowcount > 0
 
-        for row in rows:
-            product = Product(*row)
-            products[product] = product
+    def get_stores_db(self, store_id):
+        # Query
+        self.cursor.execute("SELECT id, title, description, store_owner FROM stores WHERE id = %s", (store_id, ))
+        self.logging.info(f"{self.cursor.rowcount} stores retrieved", )
 
-        return products
+        row = self.cursor.fetchone()
+        (id, title, description, store_owner) = row
+        store = Store(id, title, description, store_owner)
 
+        return store
+
+    def get_products_db(self, product_id):
+        # Query
+        self.cursor.execute("SELECT product_id, store_id, title, description, price, features FROM products WHERE product_id = %s", (product_id, ))
+        self.logging.info(f"{self.cursor.rowcount} products retrieved", )
+
+        row = self.cursor.fetchone()
+        (product_id, store_id, title, description, price, features) = row
+        product = Product(product_id, store_id, title, description, price, features)
+
+        return product
 
     def add_stores(self, st: Store):
         st_tuple = dataclasses.astuple(st)
@@ -97,6 +104,10 @@ class postgresDBClient:
 
         try:
             self.cursor.execute(insert_store, st_tuple)
+
+            # Commit changes to db
+            self.conn.commit()
+
         except Exception as e:
             error_msg = f"Unable to add new store: Exception: {e}"
             self.logging.warning(error_msg)
@@ -106,8 +117,7 @@ class postgresDBClient:
         count = self.cursor.rowcount
         self.logging.info(f"{count} Record(s) inserted successfully into Stores table")
 
-        # Commit changes
-        self.conn.commit()
+        
 
     def add_products(self, prdt: Product):
         prdt_tuple = dataclasses.astuple(prdt)
@@ -117,6 +127,10 @@ class postgresDBClient:
 
         try:
             self.cursor.execute(insert_product, prdt_tuple)
+        
+            # Commit changes to db
+            self.conn.commit()
+        
         except Exception as e:
             error_msg = f"Unable to add new product: Exception: {e}"
             self.logging.warning(error_msg)
@@ -126,13 +140,13 @@ class postgresDBClient:
         count = self.cursor.rowcount
         self.logging.info(f"{count} Record(s) inserted successfully into Products table")
 
-        # Commit changes
-        self.conn.commit()
-
+        
     def update_store(self, store: Store):
         try:
             # Update by store_address
             self.cursor.execute("UPDATE stores SET title = %s, description = %s WHERE id = %s", (store.title, store.description, store.id))
+            # Commit the changes to the database
+            self.conn.commit()
         except Exception as e:
             error_msg = f"Unable to update store: Exception: {e}"
             self.logging.warning(error_msg)
@@ -141,9 +155,6 @@ class postgresDBClient:
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
         self.logging.info(f"{rows_updated} Record(s) updated on Stores table")
-
-        # Commit the changes to the database
-        self.conn.commit()
 
         # Create new store
         new_store = Store(
@@ -193,28 +204,38 @@ class postgresDBClient:
     def delete_stores(self, store: Store):
         store_address = store.id
         
-        # Delete store by store_address
-        self.cursor.execute("DELETE FROM stores WHERE id = %s", (store_address,))
+        try:        
+           # Delete store by store_address
+            self.cursor.execute("DELETE FROM stores WHERE id = %s", (store_address,))
+            # Commit the changes to the database
+            self.conn.commit()
+        except Exception as e:
+            error_msg = f"Unable to delete store: Exception: {e}"
+            self.logging.warning(error_msg)
+        
 
         # get the number of updated rows
         rows_deleted = self.cursor.rowcount
         self.logging.info(f"{rows_deleted} Record(s) deleted from Stores table")
 
-        # Commit the changes to the database
-        self.conn.commit()
+
         
     def delete_products(self, product: Product):
         product_name = product.product_id
-        
-        # Delete store by store_address
-        self.cursor.execute("DELETE FROM products WHERE product_id = %s", (product_name,))
+
+        try:
+            # Delete products by product_id
+            self.cursor.execute("DELETE FROM products WHERE product_id = %s", (product_name,))
+            # Commit the changes to the database
+            self.conn.commit()
+        except Exception as e:
+            error_msg = f"Unable to delete product: Exception: {e}"
+            self.logging.warning(error_msg)
 
         # get the number of updated rows
         rows_deleted = self.cursor.rowcount
         self.logging.info(f" {rows_deleted} Record(s) deleted from Products table")
 
-        # Commit the changes to the database
-        self.conn.commit()
 
 
     def write_store_created(self, store: StoreCreated):
@@ -231,20 +252,27 @@ class postgresDBClient:
         # Commit changes
         self.conn.commit()
 
-        # Create new store
-        new_store = Store(
-            id=store.storeAddress,
-            title="",
-            description = "",
-            store_owner = store.storeOwner,
-        )
+        # Check if store exists in db and add existing store to dictionary 
+        if self.check_stores(store.storeAddress):
+            existing_store = self.get_stores_db(store.storeAddress)
+            self.stores[existing_store] = existing_store
+            self.logging.info(f"{store.storeAddress} id: store exists")
+        
+        else:
+            # Add new store to stores db and stores dictionary
+            # Create new store
+            new_store = Store(
+                id=store.storeAddress,
+                title="",
+                description = "",
+                store_owner = store.storeOwner,
+            )
 
-        # Add to dictionary - NOTE: to remove this when actual data is updated from front end
-        # This should only be in updated_store but required for update/delete functions now
-        self.stores[new_store] = new_store
+            # Add to dictionary 
+            self.stores[new_store] = new_store
 
-        # Add to uneditable store table in DB
-        self.add_stores(new_store)
+            # Add to dynamic store table in DB
+            self.add_stores(new_store)
 
 
     def write_store_removed(self, store: StoreRemoved): 
@@ -291,31 +319,38 @@ class postgresDBClient:
         # Commit changes
         self.conn.commit()
 
-        # Create new store
-        new_store = Store(
-            id=store.newStoreAddress,
-            title="",
-            description = "",
-            store_owner = store.storeAddress, #to change to storeOwner when available on smartcontract
-        )
+        # Check if updated store exists in db and add existing store to dictionary 
+        if self.check_stores(store.newStoreAddress):
+            existing_store = self.get_stores_db(store.newStoreAddress)
+            self.stores[existing_store] = existing_store
+            self.logging.info(f"{store.newStoreAddress} id: store exists")
+        
+        else:
+            # Delete old store and add new store to dictionary and DB
+            # Delete related products
 
-        # Delete old store and add new store to dictionary and DB
-        # Delete related products
+            # Create new store
+            new_store = Store(
+                id=store.newStoreAddress,
+                title="",
+                description = "",
+                store_owner = store.storeAddress, #TODO: does storeOwner exist on new smartcontract?
+            )
 
-        for current_product in self.products:
-            if(current_product.store_id == store.storeAddress):
-                self.products.pop(current_product)
-                self.delete_products(current_product)
-                break 
+            for current_product in self.products:
+                if(current_product.store_id == store.storeAddress):
+                    self.products.pop(current_product)
+                    self.delete_products(current_product)
+                    break 
 
-        for current_store in self.stores:
-            if(current_store.id == store.storeAddress):
-                self.stores.pop(current_store)
-                self.delete_stores(current_store) 
-                break
+            for current_store in self.stores:
+                if(current_store.id == store.storeAddress):
+                    self.stores.pop(current_store)
+                    self.delete_stores(current_store) 
+                    break
 
-        self.stores[new_store] = new_store
-        self.add_stores(new_store)
+            self.stores[new_store] = new_store
+            self.add_stores(new_store)
     
 
 
@@ -333,22 +368,28 @@ class postgresDBClient:
         # Commit changes
         self.conn.commit()
 
-        # Create new product
-        new_product = Product(
-            product_id = product.productName,
-            store_id = product.storeAddress,
-            title = " ",
-            description = " ",
-            price = product.price,
-            features = []
-        )
+        # Check if product exists in db and add existing product to dictionary 
+        if self.check_products(product.productName):
+            existing_product = self.get_products_db(product.productName)
+            self.products[existing_product] = existing_product
+            self.logging.info(f"{product.productName} id: product exists")
+        
+        else:
+            # Create new product
+            new_product = Product(
+                product_id = product.productName,
+                store_id = product.storeAddress,
+                title = " ",
+                description = " ",
+                price = product.price,
+                features = []
+            )
 
-        # Add to dictionary - NOTE: to remove this when actual data is updated from front end
-        # This should only be in updated_product but required for update/delete functions now
-        self.products[new_product] = new_product
+            # Add to dictionary
+            self.products[new_product] = new_product
 
-        # Add to uneditable product table in DB
-        self.add_products(new_product)
+            # Add to dynamic product table in DB
+            self.add_products(new_product)
 
 
     def write_product_removed(self, product: ProductRemoved): 
@@ -389,27 +430,34 @@ class postgresDBClient:
         # Commit changes
         self.conn.commit()
 
-        # Create new product
-        new_product = Product(
-            product_id = product_update.productName,
-            store_id = product_update.storeAddress,
-            title = " ",
-            description = " ",
-            price = product_update.newPrice,
-            features = []
-        )
-
-        # Remove old product from dictionary and DB and add new product
-        for current_product in self.products:
-            if(current_product.product_id == product_update.productName):
-                self.products.pop(current_product)
-                self.delete_products(current_product)
-                break 
+        # Check if product exists in db and add existing product to dictionary 
+        if self.check_products(product_update.productName):
+            existing_product = self.get_products_db(product_update.productName)
+            self.products[existing_product] = existing_product
+            self.logging.info(f"{product_update.productName} id: product exists")
         
-        self.products[new_product] = new_product
+        else:
+            # Create new product
+            new_product = Product(
+                product_id = product_update.productName,
+                store_id = product_update.storeAddress,
+                title = " ",
+                description = " ",
+                price = product_update.newPrice,
+                features = []
+            )
 
-        # Add to product table in DB
-        self.add_products(new_product)
+            # Remove old product from dictionary and DB and add new product
+            for current_product in self.products:
+                if(current_product.product_id == product_update.productName):
+                    self.products.pop(current_product)
+                    self.delete_products(current_product)
+                    break 
+            
+            self.products[new_product] = new_product
+
+            # Add to product table in DB
+            self.add_products(new_product)
     
     def to_array(self, value):
         return '{' + ','.join(value) + '}'
