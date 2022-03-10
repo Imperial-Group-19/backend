@@ -5,7 +5,7 @@ from db_objects import Store, User, Transaction, Product, StoreCreated, StoreRem
 
 from logging import Logger
 
-# TODO: For affiliates - StoreUpdated / OwnershipTransferred/ ProductCreated
+# TODO: Test for new smart contract
 
 class postgresDBClient:
     def __init__(self, logging):
@@ -28,11 +28,13 @@ class postgresDBClient:
         # self.logging.info when connection is successful
         self.logging.info("Database has been connected successfully !!")
 
-        # Initialise stores, products, transactions
+        # Initialise stores, products, transactions, affiliates
         self.stores: Dict[Store, Store] = {}
         self.products: Dict[Product, Product] = {}
-        self.paymentmade: List[PaymentMade] = [] 
-        self.refundmade: List[RefundMade] = []
+        # TODO: uncomment and test for new smartcontract
+        # self.affiliates: Dict[Affiliate, Affiliate] = {}
+        self.paymentmade: List[PaymentMade] = [] #TODO: to send this information to frontend for analytics
+        self.refundmade: List[RefundMade] = [] #TODO: to send this information to frontend for analytics
 
         
     def connect(self): #testing function
@@ -66,35 +68,91 @@ class postgresDBClient:
         # return boolean
         return self.cursor.rowcount > 0
 
-    def check_products(self, product_id):
-        # Query
-        self.cursor.execute("SELECT product_id FROM products WHERE product_id = %s", (product_id, ))
-        self.logging.info(f"The number of existing products: {self.cursor.rowcount}")
+    def check_products(self, product, updated = False):
+        if not updated:
+            # Query
+            self.cursor.execute("SELECT product_id FROM products WHERE product_id = %s AND store_id = %s", (product.productName, product.storeAddress))
+            self.logging.info(f"The number of existing products: {self.cursor.rowcount}")
+            
+            # return boolean
+            return self.cursor.rowcount > 0
         
-        # return boolean
-        return self.cursor.rowcount > 0
+        else:
+            # Query
+            self.cursor.execute("SELECT product_id FROM products WHERE product_id = %s AND store_id = %s AND price = %s", (product.productName, product.storeAddress, product.newPrice))
+            self.logging.info(f"The number of existing updated products: {self.cursor.rowcount}")
+            
+            # return boolean
+            return self.cursor.rowcount > 0
 
-    def get_stores_db(self, store_id):
+    # TODO: uncomment and test for new smart contract
+    # def check_affiliates(self, affiliate_address):
+    #      # Query
+    #     self.cursor.execute("SELECT id FROM affiliates WHERE affiliate_address = %s", (affiliate_address, ))
+    #     self.logging.info(f"The number of existing affiliates: {self.cursor.rowcount}", )
+
+    #     # return boolean
+    #     return self.cursor.rowcount > 0
+
+
+    def get_stores_db(self, store_id, dynamic = False):
         # Query
-        self.cursor.execute("SELECT id, title, description, store_owner FROM stores WHERE id = %s", (store_id, ))
-        self.logging.info(f"{self.cursor.rowcount} stores retrieved", )
+        if not dynamic:
+            self.cursor.execute("SELECT id, title, description, store_owner FROM stores WHERE id = %s", (store_id, ))
+            self.logging.info(f"{self.cursor.rowcount} stores retrieved", )
 
-        row = self.cursor.fetchone()
-        (id, title, description, store_owner) = row
-        store = Store(id, title, description, store_owner)
+            row = self.cursor.fetchone()
+            (id, title, description, store_owner) = row
+            store = Store(id, title, description, store_owner)
+            
+            return store
+        
+        else:
+            self.cursor.execute("SELECT title, description, store_owner FROM stores WHERE id = %s", (store_id, ))
+            self.logging.info(f"{self.cursor.rowcount} dynamic fields of store retrieved", )
+            
+            row = self.cursor.fetchone()
+            (title, description, store_owner) = row
 
-        return store
+            return title, description, store_owner #TODO: to remove storeOwner for new smartcontract
 
-    def get_products_db(self, product_id):
+
+    def get_products_db(self, product_id, store_id, dynamic = False):
         # Query
-        self.cursor.execute("SELECT product_id, store_id, title, description, price, features FROM products WHERE product_id = %s", (product_id, ))
-        self.logging.info(f"{self.cursor.rowcount} products retrieved", )
+        if not dynamic:
+            self.cursor.execute("SELECT product_id, store_id, title, description, price, features FROM products WHERE product_id = %s AND store_id = %s", (product_id, store_id))
+            #TODO: uncomment for product_type
+            #self.cursor.execute("SELECT product_id, store_id, title, description, price, features, product_type FROM products WHERE product_id = %s AND store_id = %s", (product_id, store_id))
+            self.logging.info(f"{self.cursor.rowcount} products retrieved", )
 
-        row = self.cursor.fetchone()
-        (product_id, store_id, title, description, price, features) = row
-        product = Product(product_id, store_id, title, description, price, features)
+            row = self.cursor.fetchone()
+            (product_id, store_id, title, description, price, features) = row
+            product = Product(product_id, store_id, title, description, price, features)
 
-        return product
+            return product
+        
+        else:
+            self.cursor.execute("SELECT title, description, features FROM products WHERE product_id = %s AND store_id = %s", (product_id, store_id))
+            #TODO: uncomment for product_type
+            #self.cursor.execute("SELECT title, description, features, product_type FROM products WHERE product_id = %s AND store_id = %s", (product_id, store_id))
+            self.logging.info(f"{self.cursor.rowcount} dynamic fields of product retrieved", )
+
+            row = self.cursor.fetchone()
+            (title, description, features) = row
+
+            return title, description, features
+
+    # TODO: uncomment and test for new smart contract
+    # def get_affiliates_db(self, affiliate_address, dynamic = False):
+    #     # Query
+    #     self.cursor.execute("SELECT affiliate_address FROM affiliates WHERE affiliate_address = %s", (affiliate_address, ))
+    #     self.logging.info(f"{self.cursor.rowcount} affiliates retrieved", )
+
+    #     row = self.cursor.fetchone()
+    #     (affiliate_address) = row
+    #     affiliate = Affiliate(affiliate_address)
+        
+    #     return affiliate
 
     def add_stores(self, st: Store):
         st_tuple = dataclasses.astuple(st)
@@ -123,7 +181,9 @@ class postgresDBClient:
         prdt_tuple = dataclasses.astuple(prdt)
 
         # Insert product details 
+        # TODO: uncomment for product_type
         insert_product = """ INSERT INTO products (PRODUCT_ID, STORE_ID, TITLE, DESCRIPTION, PRICE, FEATURES) VALUES (%s,%s,%s,%s,%s,%s)"""
+        #insert_product = """ INSERT INTO products (PRODUCT_ID, STORE_ID, TITLE, DESCRIPTION, PRICE, FEATURES, PRODUCT_TYPE) VALUES (%s,%s,%s,%s,%s,%s,%s)"""
 
         try:
             self.cursor.execute(insert_product, prdt_tuple)
@@ -139,6 +199,28 @@ class postgresDBClient:
         # Check insertion
         count = self.cursor.rowcount
         self.logging.info(f"{count} Record(s) inserted successfully into Products table")
+
+    # TODO: uncomment and test for new smart contract
+    # def add_affiliates(self, affiliate: Affiliates):
+    #     affiliate_tuple = dataclasses.astuple(st)
+
+    #     # Insert affiliate details 
+    #     insert_affiliate = """ INSERT INTO affiliates (AFFILIATE_ADDRESS) VALUES (%s)"""
+
+    #     try:
+    #         self.cursor.execute(insert_affiliate, affiliate_tuple)
+
+    #         # Commit changes to db
+    #         self.conn.commit()
+
+    #     except Exception as e:
+    #         error_msg = f"Unable to add new affiliate: Exception: {e}"
+    #         self.logging.warning(error_msg)
+        
+
+    #     # Check insertion
+    #     count = self.cursor.rowcount
+    #     self.logging.info(f"{count} Record(s) inserted successfully into Affiliates table")
 
         
     def update_store(self, store: Store):
@@ -164,7 +246,12 @@ class postgresDBClient:
             store_owner = store.store_owner,
         )
 
-        # Add to dictionary
+        # Update dictionary
+        for current_store in self.stores:
+                if(current_store.id == new_store.id):
+                    self.stores.pop(current_store)
+                    break
+
         self.stores[new_store] = new_store
 
 
@@ -173,8 +260,8 @@ class postgresDBClient:
         features = self.to_array(product_list[-1])
 
         try:
-            # Update by product_address
-            self.cursor.execute("UPDATE products SET title = %s, description = %s, features = %s WHERE product_id = %s", (product.title, product.description, features, product.product_id))
+            # Update by product_id and store_id
+            self.cursor.execute("UPDATE products SET title = %s, description = %s, features = %s WHERE product_id = %s AND store_id = %s", (product.title, product.description, features, product.product_id, product.store_id))
         except Exception as e:
             error_msg = f"Unable to update product: Exception: {e}"
             self.logging.warning(error_msg)
@@ -187,17 +274,24 @@ class postgresDBClient:
         # Commit the changes to the database
         self.conn.commit()
 
-         # Create new product
+        # Create new product
+        # TODO: uncomment for product_type
         new_product = Product(
             product_id = product.product_id,
             store_id = product.store_id,
             title = product.title,
             description = product.description,
             price = product.price,
-            features = product.features
+            features = product.features,
+            # product_type = product.product_type
         )
 
-        # Add to dictionary
+        # Update dictionary
+        for current_product in self.products:
+            if(current_product.product_id == new_product.product_id):
+                self.products.pop(current_product)
+                break
+
         self.products[new_product] = new_product
 
 
@@ -321,22 +415,24 @@ class postgresDBClient:
 
         # Check if updated store exists in db and add existing store to dictionary 
         if self.check_stores(store.newStoreAddress):
-            existing_store = self.get_stores_db(store.newStoreAddress)
-            self.stores[existing_store] = existing_store
-            self.logging.info(f"{store.newStoreAddress} id: store exists")
-        
-        else:
-            # Delete old store and add new store to dictionary and DB
-            # Delete related products
+            existing_updated_store = self.get_stores_db(store.newStoreAddress)
+            self.stores[existing_updated_store] = existing_updated_store
+            self.logging.info(f"{store.newStoreAddress} id: updated store exists")
+
+        # Check if non-updated store exists in db and update store  
+        elif self.check_stores(store.storeAddress):
+            self.logging.info(f"{store.storeAddress} id: non-updated store exists")
+            existing_title, existing_description, existing_store_owner = self.get_stores_db(store.storeAddress, dynamic = True) #TODO: to remove storeOwner for new smartcontract
 
             # Create new store
             new_store = Store(
                 id=store.newStoreAddress,
-                title="",
-                description = "",
-                store_owner = store.storeAddress, #TODO: does storeOwner exist on new smartcontract?
+                title=existing_title,
+                description = existing_description,
+                store_owner = existing_store_owner, #TODO: to update to newStoreOwner for new smartcontract
             )
 
+            # NOTE: All products tied to previous store have been deleted and updated store is empty
             for current_product in self.products:
                 if(current_product.store_id == store.storeAddress):
                     self.products.pop(current_product)
@@ -351,6 +447,10 @@ class postgresDBClient:
 
             self.stores[new_store] = new_store
             self.add_stores(new_store)
+
+        
+        else:
+            self.logging.info(f"{store.storeAddress} id: store does not exist. To add store first.")
     
 
 
@@ -369,20 +469,22 @@ class postgresDBClient:
         self.conn.commit()
 
         # Check if product exists in db and add existing product to dictionary 
-        if self.check_products(product.productName):
-            existing_product = self.get_products_db(product.productName)
+        if self.check_products(product):
+            existing_product = self.get_products_db(product.productName, product.storeAddress)
             self.products[existing_product] = existing_product
             self.logging.info(f"{product.productName} id: product exists")
         
         else:
             # Create new product
+            # TODO: uncomment for product_type
             new_product = Product(
                 product_id = product.productName,
                 store_id = product.storeAddress,
                 title = " ",
                 description = " ",
                 price = product.price,
-                features = []
+                features = [],
+                #product_type = product.productType
             )
 
             # Add to dictionary
@@ -430,21 +532,25 @@ class postgresDBClient:
         # Commit changes
         self.conn.commit()
 
-        # Check if product exists in db and add existing product to dictionary 
-        if self.check_products(product_update.productName):
-            existing_product = self.get_products_db(product_update.productName)
+        # Check if updated product exists in db and add existing product to dictionary 
+        if self.check_products(product_update, updated = True):
+            existing_product = self.get_products_db(product_update.productName, product_update.storeAddress)
             self.products[existing_product] = existing_product
-            self.logging.info(f"{product_update.productName} id: product exists")
-        
-        else:
+            self.logging.info(f"{product_update.productName} id: updated product exists")
+
+        elif self.check_products(product_update):
+            existing_title, existing_description, existing_features = self.get_products_db(product_update.productName, product_update.storeAddress, dynamic = True)
+            
             # Create new product
+            # TODO: uncomment for product_type
             new_product = Product(
                 product_id = product_update.productName,
                 store_id = product_update.storeAddress,
-                title = " ",
-                description = " ",
+                title = existing_title,
+                description = existing_description,
                 price = product_update.newPrice,
-                features = []
+                features = existing_features,
+                #product_type = product.productType
             )
 
             # Remove old product from dictionary and DB and add new product
@@ -458,6 +564,10 @@ class postgresDBClient:
 
             # Add to product table in DB
             self.add_products(new_product)
+
+        else:
+            self.logging.info(f"{product_update.productName} id: product does not exist. To add product first.")
+            
     
     def to_array(self, value):
         return '{' + ','.join(value) + '}'
@@ -505,6 +615,98 @@ class postgresDBClient:
 
         # Add to list
         self.refundmade.append(transaction)
+
+    # TODO: uncomment and test for new smart contract
+    # TODO: add affiliate_registered event table to DB
+    # def write_affiliate_registered(self, affiliate: AffiliateRegistered): 
+    #     affiliate_tuple = dataclasses.astuple(affiliate)
+
+    #     # Insert AffiliateRegistered event details 
+    #     insert_affiliate_registered = """ INSERT INTO affiliateregistered (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, AFFILIATEADDRESS) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"""
+
+    #     self.cursor.execute(insert_affiliate_registered, affiliate_tuple)
+
+    #     # Check insertion
+    #     count = self.cursor.rowcount
+    #     self.logging.info(f"{count} Record(s) inserted successfully into AffiliateRegistered table")
+
+    #     # Commit changes
+    #     self.conn.commit()
+
+    #     # Add affiliate to dynamic affiliate table
+    #     if self.check_affiliates(affiliate.affiliateAddress):
+    #         existing_affiliate = self.get_affiliates_db(affiliate.affiliateAddress)
+    #         self.affiliates[existing_affiliate] = existing_affiliate
+    #         self.logging.info(f"{affiliate.affiliateAddress} id: affiliate exists")
+        
+    #     else:
+    #         # Create new affiliate
+    #         new_affiliate = Affiliate(
+    #             affiliate_address=affiliate.affiliateAddress,
+    #         )
+
+    #         # Add to dictionary 
+    #         self.affiliates[new_affiliate] = new_affiliate
+
+    #         # Add to dynamic affiliate table in DB
+    #         self.add_affiliates(new_affiliate)
+
+    # TODO: uncomment and test for new smart contract
+    # def write_ownership_transferred(self, store: OwnershipTransferred): 
+    #     store_tuple = dataclasses.astuple(store)
+
+    #     # Insert OwnershipTransferred event details 
+    #     insert_ownership_transferred = """ INSERT INTO ownershiptransferred (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, PREVIOUSOWNER, NEWOWNER) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"""
+
+    #     self.cursor.execute(insert_ownership_transferred, store_tuple)
+
+    #     # Check insertion
+    #     count = self.cursor.rowcount
+    #     self.logging.info(f"{count} Record(s) inserted successfully into OwnershipTransferred table")
+
+    #     # Commit changes
+    #     self.conn.commit()
+
+        # Update store with new owner - TODO: Edit code below -- might need to update check_stores to include storeOwner check
+        # # Check if updated store exists in db and add existing store to dictionary 
+        # if self.check_stores(store.newStoreAddress):
+        #     existing_updated_store = self.get_stores_db(store.newStoreAddress)
+        #     self.stores[existing_updated_store] = existing_updated_store
+        #     self.logging.info(f"{store.newStoreAddress} id: updated store exists")
+
+        # # Check if non-updated store exists in db and update store  
+        # elif self.check_stores(store.storeAddress):
+        #     self.logging.info(f"{store.storeAddress} id: non-updated store exists")
+        #     existing_title, existing_description, existing_store_owner = self.get_stores_db(store.storeAddress, dynamic = True) #TODO: to remove storeOwner for new smartcontract
+
+        #     # Create new store
+        #     new_store = Store(
+        #         id=store.newStoreAddress,
+        #         title=existing_title,
+        #         description = existing_description,
+        #         store_owner = existing_store_owner, #TODO: to update to newStoreOwner for new smartcontract
+        #     )
+
+        #     # NOTE: All products tied to previous store have been deleted and updated store is empty
+        #     for current_product in self.products:
+        #         if(current_product.store_id == store.storeAddress):
+        #             self.products.pop(current_product)
+        #             self.delete_products(current_product)
+        #             break 
+
+        #     for current_store in self.stores:
+        #         if(current_store.id == store.storeAddress):
+        #             self.stores.pop(current_store)
+        #             self.delete_stores(current_store) 
+        #             break
+
+        #     self.stores[new_store] = new_store
+        #     self.add_stores(new_store)
+
+        
+        # else:
+        #     self.logging.info(f"{store.storeAddress} id: store does not exist. To add store first.")
+
 
     def get_products(self):
         return self.products.values()
