@@ -119,27 +119,37 @@ title TEXT,
 description TEXT,
 price INT NOT NULL,
 features TEXT[],
+product_type INT NOT NULL,
 PRIMARY KEY (product_id, store_id),
 FOREIGN KEY (store_id)
 REFERENCES stores(id));
 
-CREATE TABLE StoresEditable(
-id TEXT NOT NULL,
-title TEXT,
-description TEXT,
-store_owner TEXT NOT NULL,
-PRIMARY KEY (id));
+CREATE TABLE AffiliateRegistered(
+block_hash TEXT NOT NULL,
+transaction_hash TEXT NOT NULL,
+block_number INT NOT NULL,
+address TEXT NOT NULL, 
+data TEXT NOT NULL,
+transaction_idx INT NOT NULL,
+storeAddress TEXT NOT NULL),
+affiliateAddress TEXT NOT NULL);
 
-CREATE TABLE ProductsEditable(
-product_id TEXT NOT NULL,
-store_id TEXT NOT NULL,
-title TEXT,
-description TEXT,
-price INT NOT NULL,
-features TEXT[],
-PRIMARY KEY (product_id, store_id),
-FOREIGN KEY (store_id)
-REFERENCES stores(id));
+CREATE TABLE Affiliates(
+affiliateAddress TEXT NOT NULL,
+PRIMARY KEY (affiliateAddress));
+
+CREATE TABLE OwnershipTransferred(
+block_hash TEXT NOT NULL,
+transaction_hash TEXT NOT NULL,
+block_number INT NOT NULL,
+address TEXT NOT NULL, 
+data TEXT NOT NULL,
+transaction_idx INT NOT NULL,
+#storeAddres TEXT NOT NULL,
+previousOwner TEXT NOT NULL,
+newOwner TEXT NOT NULL);
+
+
 
 # tables summary
 \dt
