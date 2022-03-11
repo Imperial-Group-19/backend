@@ -229,7 +229,7 @@ class postgresDBClient:
             id=store.id,
             title = store.title,
             description = store.description,
-            store_owner = store.storeOwner,
+            storeOwner=store.storeOwner,
         )
 
         # Update dictionary
@@ -257,13 +257,13 @@ class postgresDBClient:
 
         # Create new product
         new_product = Product(
-            product_id = product.productName,
-            store_id = product.storeAddress,
-            title = product.title,
-            description = product.description,
-            price = product.price,
-            features = product.features,
-            product_type = product.productType
+            productName=product.productName,
+            storeAddress=product.storeAddress,
+            title=product.title,
+            description=product.description,
+            price=product.price,
+            features=product.features,
+            productType=product.productType
         )
 
         # Update dictionary
@@ -334,8 +334,8 @@ class postgresDBClient:
             new_store = Store(
                 id=store.storeAddress,
                 title="",
-                description = "",
-                store_owner = store.storeOwner,
+                description="",
+                storeOwner=store.storeOwner,
             )
 
             # Add to dictionary 
@@ -404,7 +404,7 @@ class postgresDBClient:
                 id=store.newStoreAddress,
                 title=existing_title,
                 description = existing_description,
-                store_owner = store.newStoreAddress
+                storeOwner=store.newStoreAddress
             )
 
             # NOTE: All products tied to previous store have been deleted and updated store is empty
