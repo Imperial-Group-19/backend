@@ -7,6 +7,7 @@ from logging import Logger
 
 # TODO: Test for new smart contract
 
+
 class postgresDBClient:
     def __init__(self, logging):
         # Connection establishment
@@ -36,7 +37,6 @@ class postgresDBClient:
         self.paymentmade: List[PaymentMade] = [] #TODO: to send this information to frontend for analytics
         self.refundmade: List[RefundMade] = [] #TODO: to send this information to frontend for analytics
 
-        
     def connect(self): #testing function
         # Connection establishment
         self.conn = psycopg2.connect(
@@ -94,7 +94,6 @@ class postgresDBClient:
     #     # return boolean
     #     return self.cursor.rowcount > 0
 
-
     def get_stores_db(self, store_id, dynamic = False):
         # Query
         if not dynamic:
@@ -115,7 +114,6 @@ class postgresDBClient:
             (title, description) = row
 
             return title, description
-
 
     def get_products_db(self, product_id, store_id, dynamic = False):
         # Query
@@ -151,7 +149,7 @@ class postgresDBClient:
     #     return affiliate
 
     def add_stores(self, st: Store):
-        st_tuple = dataclasses.astuple(st)
+        st_tuple = (st.id, st.title, st.description, st.store_owner)
 
         # Insert store details 
         insert_store = """ INSERT INTO stores (ID, TITLE, DESCRIPTION, STORE_OWNER) VALUES (%s,%s,%s,%s)"""
@@ -165,16 +163,13 @@ class postgresDBClient:
         except Exception as e:
             error_msg = f"Unable to add new store: Exception: {e}"
             self.logging.warning(error_msg)
-        
 
         # Check insertion
         count = self.cursor.rowcount
         self.logging.info(f"{count} Record(s) inserted successfully into Stores table")
 
-        
-
     def add_products(self, prdt: Product):
-        prdt_tuple = dataclasses.astuple(prdt)
+        prdt_tuple = (prdt.product_id, prdt.store_id, prdt.title, prdt.description, prdt.price, prdt.features, prdt.product_type)
 
         # Insert product details 
         insert_product = """ INSERT INTO products (PRODUCT_ID, STORE_ID, TITLE, DESCRIPTION, PRICE, FEATURES, PRODUCT_TYPE) VALUES (%s,%s,%s,%s,%s,%s,%s)"""
@@ -188,8 +183,7 @@ class postgresDBClient:
         except Exception as e:
             error_msg = f"Unable to add new product: Exception: {e}"
             self.logging.warning(error_msg)
-        
-            
+
         # Check insertion
         count = self.cursor.rowcount
         self.logging.info(f"{count} Record(s) inserted successfully into Products table")
@@ -216,7 +210,6 @@ class postgresDBClient:
     #     count = self.cursor.rowcount
     #     self.logging.info(f"{count} Record(s) inserted successfully into Affiliates table")
 
-        
     def update_store(self, store: Store):
         try:
             # Update by store_address
@@ -226,7 +219,6 @@ class postgresDBClient:
         except Exception as e:
             error_msg = f"Unable to update store: Exception: {e}"
             self.logging.warning(error_msg)
-        
 
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
@@ -248,20 +240,13 @@ class postgresDBClient:
 
         self.stores[new_store] = new_store
 
-
     def update_product(self, product: Product):
-        product_list = list(dataclasses.asdict(product).values())
-        self.logging.warning(product_list)
-        features = self.to_array(product_list[-1])
-        self.logging.warning(features)
-
         try:
             # Update by product_id and store_id
-            self.cursor.execute("UPDATE products SET title = %s, description = %s, features = %s WHERE product_id = %s AND store_id = %s", (product.title, product.description, features, product.product_id, product.store_id))
+            self.cursor.execute("UPDATE products SET title = %s, description = %s, features = %s WHERE product_id = %s AND store_id = %s", (product.title, product.description, self.to_array(product.features), product.product_id, product.store_id))
         except Exception as e:
             error_msg = f"Unable to update product: Exception: {e}"
             self.logging.warning(error_msg)
-        
 
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
@@ -289,7 +274,6 @@ class postgresDBClient:
 
         self.products[new_product] = new_product
 
-
     def delete_stores(self, store: Store):
         store_address = store.id
         
@@ -306,8 +290,6 @@ class postgresDBClient:
         # get the number of updated rows
         rows_deleted = self.cursor.rowcount
         self.logging.info(f"{rows_deleted} Record(s) deleted from Stores table")
-
-
         
     def delete_products(self, product: Product):
         product_name = product.product_id
@@ -325,10 +307,9 @@ class postgresDBClient:
         rows_deleted = self.cursor.rowcount
         self.logging.info(f" {rows_deleted} Record(s) deleted from Products table")
 
-
-
     def write_store_created(self, store: StoreCreated):
-        storecreate_tuple = dataclasses.astuple(store)
+        storecreate_tuple = (store.block_hash, store.transaction_hash, store.block_number, store.address, store.data,
+                             store.transaction_idx, store.storeAddress, store.storeOwner)
 
         # Insert StoreCreated event details 
         insert_store_created = """ INSERT INTO storecreated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, STOREOWNER) VALUES (%s,%s,%s,%s,%s,%s,%s, %s)"""
@@ -363,7 +344,6 @@ class postgresDBClient:
             # Add to dynamic store table in DB
             self.add_stores(new_store)
 
-
     def write_store_removed(self, store: StoreRemoved): 
         storeremove_tuple = dataclasses.astuple(store)
 
@@ -391,7 +371,6 @@ class postgresDBClient:
                 self.stores.pop(current_store)
                 self.delete_stores(current_store)
                 break 
-
 
     def write_store_updated(self, store: StoreUpdated): 
         storeupdate_tuple = dataclasses.astuple(store)
@@ -447,8 +426,6 @@ class postgresDBClient:
         
         else:
             self.logging.info(f"{store.storeAddress} id: store does not exist. To add store first.")
-    
-
 
     def write_product_created(self, product: ProductCreated):
         productcreate_tuple = dataclasses.astuple(product)
@@ -544,7 +521,7 @@ class postgresDBClient:
                 description = existing_description,
                 price = product_update.newPrice,
                 features = existing_features,
-                product_type = product.productType
+                product_type = product_update.productType
             )
 
             # Remove old product from dictionary and DB and add new product
@@ -561,19 +538,16 @@ class postgresDBClient:
 
         else:
             self.logging.info(f"{product_update.productName} id: product does not exist. To add product first.")
-            
-    
+
     def to_array(self, value):
         return '{' + ','.join(value) + '}'
 
-    def write_payment_made(self, transaction: PaymentMade): 
-        paymentmade_list = list(dataclasses.asdict(transaction).values()) 
+    def write_payment_made(self, transaction: PaymentMade):
+        paymentmade_tuple = (transaction.block_hash, transaction.transaction_hash, transaction.block_number,
+                             transaction.address, transaction.data, transaction.transaction_idx, transaction.customer,
+                             transaction.storeAddress, self.to_array(transaction.productNames))
 
-        paymentmade_list[-1] = self.to_array(paymentmade_list[-1])
-        
-        paymentmade_tuple = tuple(paymentmade_list)
-
-        # Insert PaymentMade event details 
+        # Insert PaymentMade event details
         insert_payment_made = """ INSERT INTO paymentmade (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, CUSTOMER, STOREADDRESS, PRODUCTNAMES) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
 
         self.cursor.execute(insert_payment_made, paymentmade_tuple)
@@ -589,11 +563,9 @@ class postgresDBClient:
         self.paymentmade.append(transaction)
 
     def write_refund_made(self, transaction: RefundMade):
-        refundmade_list = list(dataclasses.asdict(transaction).values()) 
-
-        refundmade_list[-1] = self.to_array(refundmade_list[-1])
-        
-        refundmade_tuple = tuple(refundmade_list)
+        refundmade_tuple = (transaction.block_hash, transaction.transaction_hash, transaction.block_number,
+                            transaction.address, transaction.data, transaction.transaction_idx,
+                            transaction.customer, transaction.storeAddress, self.to_array(transaction.product_names))
 
         # Insert RefundMade event details 
         insert_refund_made = """ INSERT INTO refundmade (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, CUSTOMER, STOREADDRESS, PRODUCTNAMES) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
