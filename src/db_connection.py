@@ -1,9 +1,11 @@
-from typing import Dict, List
 import dataclasses
-import psycopg2
-from db_objects import Store, User, Transaction, Product, Affiliate, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, ProductCreated, ProductRemoved, ProductUpdated, AffiliateRegistered, OwnershipTransferred
+from typing import Dict, List
 
-from logging import Logger
+import psycopg2
+
+from db_objects import Store, Product, Affiliate, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, \
+    ProductCreated, ProductRemoved, ProductUpdated, AffiliateRegistered, OwnershipTransferred
+
 
 class postgresDBClient:
     def __init__(self, logging):
@@ -184,7 +186,7 @@ class postgresDBClient:
         self.logging.info(f"{count} Record(s) inserted successfully into Products table")
 
     def add_affiliates(self, affiliate: Affiliate):
-        affiliate_tuple = dataclasses.astuple(st)
+        affiliate_tuple = dataclasses.astuple(affiliate)
 
         # Insert affiliate details 
         insert_affiliate = """ INSERT INTO affiliates (AFFILIATE_ADDRESS) VALUES (%s)"""
@@ -199,7 +201,6 @@ class postgresDBClient:
             error_msg = f"Unable to add new affiliate: Exception: {e}"
             self.logging.warning(error_msg)
         
-
         # Check insertion
         count = self.cursor.rowcount
         self.logging.info(f"{count} Record(s) inserted successfully into Affiliates table")
@@ -597,7 +598,7 @@ class postgresDBClient:
         else:
             # Create new affiliate
             new_affiliate = Affiliate(
-                affiliate_address=affiliate.affiliateAddress,
+                affiliateAddress=affiliate.affiliateAddress,
             )
 
             # Add to dictionary 
@@ -606,7 +607,6 @@ class postgresDBClient:
             # Add to dynamic affiliate table in DB
             self.add_affiliates(new_affiliate)
 
-   
     def write_ownership_transferred(self, store: OwnershipTransferred): 
         store_tuple = dataclasses.astuple(store)
 
