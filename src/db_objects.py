@@ -68,9 +68,9 @@ class Affiliate:
             if self.affiliateAddress == __o.affiliateAddress:
                 return True
         return False
-    def __hash__(self) -> int:
+    def __hash__(self) -> str:
         return hash(self.affiliateAddress)
-        
+
 @dataclass(init=True, repr=True)
 class FunnelEvent:
     blockHash: str
