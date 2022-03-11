@@ -50,7 +50,7 @@ class MyClientProtocol(WebSocketClientProtocol):
                 id="0x02b7433ea4f93554856aa657da1494b2bf645ef0",
                 title="Super Algorithms Inc.",
                 description="We help you prepare for Tech Interviews.",
-                store_owner="0x599410057bc933fd2f7319a5a835c88a9300bfb0"
+                storeOwner="0x599410057bc933fd2f7319a5a835c88a9300bfb0"
             )
 
             response = Update(id=10, jsonrpc="2.0", method=WSMsgType.updateValue.value,
@@ -60,15 +60,15 @@ class MyClientProtocol(WebSocketClientProtocol):
             self.sendMessage(payload=bytes_msg, isBinary=True)
 
             new_product = Product(
-                product_id="C++",
-                store_id="0x02b7433ea4f93554856aa657da1494b2bf645ef0",
+                productName="C++",
+                storeAddress="0x02b7433ea4f93554856aa657da1494b2bf645ef0",
                 title="C++ course",
                 description="Try out our newest course in C++ and impress your interviewers.",
                 price=10000,
                 features=[
                     "Full algorithms course in C++"
                 ],
-                product_type=1
+                productType=1
             )
             response = Update(id=10, jsonrpc="2.0", method=WSMsgType.updateValue.value,
                               params=[DBType.products.value, new_product.__dict__])
