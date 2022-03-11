@@ -149,7 +149,12 @@ class WebSocketServer(WebSocketServerFactory):
                     if msg_received.params[0] == DBType.products.value:
                         try:
                             product = Product(**msg_received.params[1])
-                            inserted = self.update_product(product)
+                            try:
+                                inserted = self.update_product(product)
+                            except Exception as e:
+                                error_msg = f"Update product failed here: {e}"
+                                self.logging.exception(error_msg)
+
                             self.send_response_msg(server_protocol=subscriber, msg_id=msg_received.id, result=inserted)
                             if inserted:
                                 self.send_product_update(product)

@@ -250,8 +250,10 @@ class postgresDBClient:
 
 
     def update_product(self, product: Product):
-        product_list = list(dataclasses.asdict(product).values()) 
+        product_list = list(dataclasses.asdict(product).values())
+        self.logging.warning(product_list)
         features = self.to_array(product_list[-1])
+        self.logging.warning(features)
 
         try:
             # Update by product_id and store_id
