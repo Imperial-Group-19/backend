@@ -61,6 +61,17 @@ class Product:
 
 
 @dataclass(init=True, repr=True)
+class Affiliate:
+    affiliateAddress: str
+    def __eq__(self, __o: object) -> bool:
+        if isinstance(__o, Affiliate):
+            if self.affiliateAddress == __o.affiliateAddress:
+                return True
+        return False
+    def __hash__(self) -> int:
+        return hash(self.affiliateAddress)
+        
+@dataclass(init=True, repr=True)
 class FunnelEvent:
     blockHash: str
     transactionHash: str

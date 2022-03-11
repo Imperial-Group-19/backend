@@ -51,7 +51,7 @@ transaction_idx INT NOT NULL,
 storeAddress TEXT NOT NULL,
 productName TEXT NOT NULL,
 productType INT NOT NULL,
-price INT NOT NULL);
+price BIGINT NOT NULL);
 
 CREATE TABLE ProductRemoved(
 block_hash TEXT NOT NULL,
@@ -118,7 +118,7 @@ product_id TEXT NOT NULL,
 store_id TEXT NOT NULL,
 title TEXT,
 description TEXT,
-price INT NOT NULL,
+price BIGINT NOT NULL,
 features TEXT[],
 product_type INT NOT NULL,
 PRIMARY KEY (product_id, store_id),

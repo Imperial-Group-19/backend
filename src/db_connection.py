@@ -1,12 +1,9 @@
 from typing import Dict, List
 import dataclasses
 import psycopg2
-from db_objects import Store, User, Transaction, Product, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, ProductCreated, ProductRemoved, ProductUpdated, AffiliateRegistered, OwnershipTransferred
+from db_objects import Store, User, Transaction, Product, Affiliate, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, ProductCreated, ProductRemoved, ProductUpdated, AffiliateRegistered, OwnershipTransferred
 
 from logging import Logger
-
-# TODO: Test for new smart contract
-
 
 class postgresDBClient:
     def __init__(self, logging):
@@ -32,8 +29,7 @@ class postgresDBClient:
         # Initialise stores, products, transactions, affiliates
         self.stores: Dict[Store, Store] = {}
         self.products: Dict[Product, Product] = {}
-        # TODO: affiliates commented out
-        # self.affiliates: Dict[Affiliate, Affiliate] = {}
+        self.affiliates: Dict[Affiliate, Affiliate] = {}
         self.paymentmade: List[PaymentMade] = [] #TODO: to send this information to frontend for analytics
         self.refundmade: List[RefundMade] = [] #TODO: to send this information to frontend for analytics
 
@@ -85,14 +81,13 @@ class postgresDBClient:
             # return boolean
             return self.cursor.rowcount > 0
 
-    #TODO: Affiliates commented out
-    # def check_affiliates(self, affiliate_address):
-    #      # Query
-    #     self.cursor.execute("SELECT id FROM affiliates WHERE affiliate_address = %s", (affiliate_address, ))
-    #     self.logging.info(f"The number of existing affiliates: {self.cursor.rowcount}", )
+    def check_affiliates(self, affiliate_address):
+         # Query
+        self.cursor.execute("SELECT id FROM affiliates WHERE affiliate_address = %s", (affiliate_address, ))
+        self.logging.info(f"The number of existing affiliates: {self.cursor.rowcount}", )
 
-    #     # return boolean
-    #     return self.cursor.rowcount > 0
+        # return boolean
+        return self.cursor.rowcount > 0
 
     def get_stores_db(self, store_id, dynamic = False):
         # Query
@@ -137,17 +132,16 @@ class postgresDBClient:
 
             return title, description, features
 
-    #TODO: Affiliates commented out
-    # def get_affiliates_db(self, affiliate_address, dynamic = False):
-    #     # Query
-    #     self.cursor.execute("SELECT affiliate_address FROM affiliates WHERE affiliate_address = %s", (affiliate_address, ))
-    #     self.logging.info(f"{self.cursor.rowcount} affiliates retrieved", )
+    def get_affiliates_db(self, affiliate_address, dynamic = False):
+        # Query
+        self.cursor.execute("SELECT affiliate_address FROM affiliates WHERE affiliate_address = %s", (affiliate_address, ))
+        self.logging.info(f"{self.cursor.rowcount} affiliates retrieved", )
 
-    #     row = self.cursor.fetchone()
-    #     (affiliate_address) = row
-    #     affiliate = Affiliate(affiliate_address)
+        row = self.cursor.fetchone()
+        (affiliate_address) = row
+        affiliate = Affiliate(affiliate_address)
         
-    #     return affiliate
+        return affiliate
 
     def add_stores(self, st: Store):
         st_tuple = (st.id, st.title, st.description, st.storeOwner)
@@ -189,27 +183,26 @@ class postgresDBClient:
         count = self.cursor.rowcount
         self.logging.info(f"{count} Record(s) inserted successfully into Products table")
 
-    #TODO: Affiliates commented out
-    # def add_affiliates(self, affiliate: Affiliates):
-    #     affiliate_tuple = dataclasses.astuple(st)
+    def add_affiliates(self, affiliate: Affiliate):
+        affiliate_tuple = dataclasses.astuple(st)
 
-    #     # Insert affiliate details 
-    #     insert_affiliate = """ INSERT INTO affiliates (AFFILIATE_ADDRESS) VALUES (%s)"""
+        # Insert affiliate details 
+        insert_affiliate = """ INSERT INTO affiliates (AFFILIATE_ADDRESS) VALUES (%s)"""
 
-    #     try:
-    #         self.cursor.execute(insert_affiliate, affiliate_tuple)
+        try:
+            self.cursor.execute(insert_affiliate, affiliate_tuple)
 
-    #         # Commit changes to db
-    #         self.conn.commit()
+            # Commit changes to db
+            self.conn.commit()
 
-    #     except Exception as e:
-    #         error_msg = f"Unable to add new affiliate: Exception: {e}"
-    #         self.logging.warning(error_msg)
+        except Exception as e:
+            error_msg = f"Unable to add new affiliate: Exception: {e}"
+            self.logging.warning(error_msg)
         
 
-    #     # Check insertion
-    #     count = self.cursor.rowcount
-    #     self.logging.info(f"{count} Record(s) inserted successfully into Affiliates table")
+        # Check insertion
+        count = self.cursor.rowcount
+        self.logging.info(f"{count} Record(s) inserted successfully into Affiliates table")
 
     def update_store(self, store: Store):
         try:
@@ -580,39 +573,38 @@ class postgresDBClient:
         # Add to list
         self.refundmade.append(transaction)
 
-    #TODO: Affiliates commented out
-    # def write_affiliate_registered(self, affiliate: AffiliateRegistered): 
-    #     affiliate_tuple = dataclasses.astuple(affiliate)
+    def write_affiliate_registered(self, affiliate: AffiliateRegistered): 
+        affiliate_tuple = dataclasses.astuple(affiliate)
 
-    #     # Insert AffiliateRegistered event details 
-    #     insert_affiliate_registered = """ INSERT INTO affiliateregistered (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, AFFILIATEADDRESS) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"""
+        # Insert AffiliateRegistered event details 
+        insert_affiliate_registered = """ INSERT INTO affiliateregistered (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, AFFILIATEADDRESS) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"""
 
-    #     self.cursor.execute(insert_affiliate_registered, affiliate_tuple)
+        self.cursor.execute(insert_affiliate_registered, affiliate_tuple)
 
-    #     # Check insertion
-    #     count = self.cursor.rowcount
-    #     self.logging.info(f"{count} Record(s) inserted successfully into AffiliateRegistered table")
+        # Check insertion
+        count = self.cursor.rowcount
+        self.logging.info(f"{count} Record(s) inserted successfully into AffiliateRegistered table")
 
-    #     # Commit changes
-    #     self.conn.commit()
+        # Commit changes
+        self.conn.commit()
 
-    #     # Add affiliate to dynamic affiliate table
-    #     if self.check_affiliates(affiliate.affiliateAddress):
-    #         existing_affiliate = self.get_affiliates_db(affiliate.affiliateAddress)
-    #         self.affiliates[existing_affiliate] = existing_affiliate
-    #         self.logging.info(f"{affiliate.affiliateAddress} id: affiliate exists")
+        # Add affiliate to dynamic affiliate table
+        if self.check_affiliates(affiliate.affiliateAddress):
+            existing_affiliate = self.get_affiliates_db(affiliate.affiliateAddress)
+            self.affiliates[existing_affiliate] = existing_affiliate
+            self.logging.info(f"{affiliate.affiliateAddress} id: affiliate exists")
         
-    #     else:
-    #         # Create new affiliate
-    #         new_affiliate = Affiliate(
-    #             affiliate_address=affiliate.affiliateAddress,
-    #         )
+        else:
+            # Create new affiliate
+            new_affiliate = Affiliate(
+                affiliate_address=affiliate.affiliateAddress,
+            )
 
-    #         # Add to dictionary 
-    #         self.affiliates[new_affiliate] = new_affiliate
+            # Add to dictionary 
+            self.affiliates[new_affiliate] = new_affiliate
 
-    #         # Add to dynamic affiliate table in DB
-    #         self.add_affiliates(new_affiliate)
+            # Add to dynamic affiliate table in DB
+            self.add_affiliates(new_affiliate)
 
    
     def write_ownership_transferred(self, store: OwnershipTransferred): 
