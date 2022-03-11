@@ -40,7 +40,7 @@ class Store:
         return hash(self.id)
 
 
-@dataclass(init=True, repr=True, frozen=True)
+@dataclass(init=True, repr=True)
 class Product:
     productName: str
     storeAddress: str

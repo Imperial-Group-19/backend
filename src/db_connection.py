@@ -450,13 +450,13 @@ class postgresDBClient:
         else:
             # Create new product
             new_product = Product(
-                product_id = product.productName,
-                store_id = product.storeAddress,
-                title = " ",
-                description = " ",
-                price = product.price,
-                features = [],
-                product_type = product.productType
+                productName=product.productName,
+                storeAddress=product.storeAddress,
+                title="",
+                description="",
+                price=product.price,
+                features=[],
+                productType=product.productType
             )
 
             # Add to dictionary
@@ -464,7 +464,6 @@ class postgresDBClient:
 
             # Add to dynamic product table in DB
             self.add_products(new_product)
-
 
     def write_product_removed(self, product: ProductRemoved): 
         productremove_tuple = dataclasses.astuple(product)
@@ -483,11 +482,10 @@ class postgresDBClient:
 
         # Remove product from dictionary and DB
         for current_product in self.products:
-            if(current_product.productName == product.productName):
+            if current_product.productName == product.productName:
                 self.products.pop(current_product)
                 self.delete_products(current_product)
                 break 
-
 
     def write_product_updated(self, product_update: ProductUpdated): 
         productupdate_tuple = dataclasses.astuple(product_update)
@@ -515,22 +513,21 @@ class postgresDBClient:
             
             # Create new product
             new_product = Product(
-                product_id = product_update.productName,
-                store_id = product_update.storeAddress,
-                title = existing_title,
-                description = existing_description,
-                price = product_update.newPrice,
-                features = existing_features,
-                product_type = product_update.productType
+                productName=product_update.productName,
+                storeAddress=product_update.storeAddress,
+                title=existing_title,
+                description=existing_description,
+                price=product_update.newPrice,
+                features=existing_features,
+                productType=0
             )
 
             # Remove old product from dictionary and DB and add new product
-            for current_product in self.products:
-                if(current_product.productName == product_update.productName):
-                    self.products.pop(current_product)
-                    self.delete_products(current_product)
-                    break 
-            
+            if new_product in self.products:
+                old_product = self.products.get(new_product)
+                new_product.productType = old_product.productType
+                self.delete_products(old_product)
+
             self.products[new_product] = new_product
 
             # Add to product table in DB
