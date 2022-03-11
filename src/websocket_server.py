@@ -155,7 +155,7 @@ class WebSocketServer(WebSocketServerFactory):
                                 self.send_product_update(product)
                             return
                         except Exception as e:
-                            error_msg = "Wrong keys/value types for product item"
+                            error_msg = f"Wrong keys/value types for product item: {msg_received}"
                             self.logging.exception(e)
 
                     elif msg_received.params[0] == DBType.stores.value:
