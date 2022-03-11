@@ -50,6 +50,7 @@ data TEXT NOT NULL,
 transaction_idx INT NOT NULL,
 storeAddress TEXT NOT NULL,
 productName TEXT NOT NULL,
+productType INT NOT NULL,
 price INT NOT NULL);
 
 CREATE TABLE ProductRemoved(
@@ -131,7 +132,7 @@ block_number INT NOT NULL,
 address TEXT NOT NULL, 
 data TEXT NOT NULL,
 transaction_idx INT NOT NULL,
-storeAddress TEXT NOT NULL),
+storeAddress TEXT NOT NULL,
 affiliateAddress TEXT NOT NULL);
 
 CREATE TABLE Affiliates(
@@ -145,7 +146,6 @@ block_number INT NOT NULL,
 address TEXT NOT NULL, 
 data TEXT NOT NULL,
 transaction_idx INT NOT NULL,
-#storeAddres TEXT NOT NULL,
 previousOwner TEXT NOT NULL,
 newOwner TEXT NOT NULL);
 

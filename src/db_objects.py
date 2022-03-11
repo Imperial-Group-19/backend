@@ -48,6 +48,7 @@ class Product:
     description: str
     price: int
     features: List[str]
+    product_type: int
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Store):
