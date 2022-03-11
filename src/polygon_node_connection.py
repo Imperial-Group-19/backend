@@ -170,10 +170,10 @@ class PolygonNodeClient:
                     event_data[param_name] = decoded_info[idx]
                 output_result.append(
                     FunnelContractEvent(
-                        block_hash=res["blockHash"],
-                        transaction_hash=res["transactionHash"],
+                        blockHash=res["blockHash"],
+                        transactionHash=res["transactionHash"],
                         address=res["address"],
-                        block_number=int(res["blockNumber"], 16),
+                        blockNumber=int(res["blockNumber"], 16),
                         data=res["data"],
                         transaction_idx=int(res["transactionIndex"], 16),
                         event=abi["name"],
