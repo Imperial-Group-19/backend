@@ -91,7 +91,7 @@ class WebSocketServer(WebSocketServerFactory):
         self.__async_server_future = self.event_loop.run_until_complete(self.server)
         self.__polygon_node_connection = PolygonNodeClient(event_loop=self.event_loop, logger=self.logging,
                                                            https_url="https://rpc-mumbai.maticvigil.com",
-                                                           contract_address="0xF9cc7D93484Cf2C64e2892d332F820495D2BDC2e",
+                                                           contract_address="0xBAdA7AAF69f5ba7930FE756c7703bcA4A297Fd0e",
                                                            contract_abi_file="funnel_abi.json",
                                                            start_block=25418911)
 

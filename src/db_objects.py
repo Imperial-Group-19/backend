@@ -96,6 +96,7 @@ class PaymentMade(FunnelEvent):
 class ProductCreated(FunnelEvent):
     storeAddress: str
     productName: str
+    productType: int
     price: int
 
 
