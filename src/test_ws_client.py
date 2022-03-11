@@ -24,7 +24,7 @@ class MyClientProtocol(WebSocketClientProtocol):
 
     def onOpen(self):
         print("WebSocket connection open.")
-        sub_msg = Subscription(id=0, jsonrpc="2.0", method=Subscription.method, params=[DBType.products.value])
+        sub_msg = Subscription(id=0, jsonrpc="2.0", method=Subscription.method, params=[DBType.products.value, DBType.stores.value])
         bytes_msg = MessageConverter.serialise_message(sub_msg)
         self.sendMessage(payload=bytes_msg, isBinary=True)
 
