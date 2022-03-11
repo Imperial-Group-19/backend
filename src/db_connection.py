@@ -1,7 +1,7 @@
 from typing import Dict, List
 import dataclasses
 import psycopg2
-from db_objects import Store, User, Transaction, Product, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, ProductCreated, ProductRemoved, ProductUpdated
+from db_objects import Store, User, Transaction, Product, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, ProductCreated, ProductRemoved, ProductUpdated, AffiliateRegistered, OwnershipTransferred
 
 from logging import Logger
 
@@ -31,7 +31,8 @@ class postgresDBClient:
         # Initialise stores, products, transactions, affiliates
         self.stores: Dict[Store, Store] = {}
         self.products: Dict[Product, Product] = {}
-        self.affiliates: Dict[Affiliate, Affiliate] = {}
+        # TODO: affiliates commented out
+        # self.affiliates: Dict[Affiliate, Affiliate] = {}
         self.paymentmade: List[PaymentMade] = [] #TODO: to send this information to frontend for analytics
         self.refundmade: List[RefundMade] = [] #TODO: to send this information to frontend for analytics
 
