@@ -67,7 +67,8 @@ class MyClientProtocol(WebSocketClientProtocol):
                 price=10000,
                 features=[
                     "Full algorithms course in C++"
-                ]
+                ],
+                product_type=1
             )
             response = Update(id=10, jsonrpc="2.0", method=WSMsgType.updateValue.value,
                               params=[DBType.products.value, new_product.__dict__])
