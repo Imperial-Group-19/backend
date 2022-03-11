@@ -459,7 +459,7 @@ class postgresDBClient:
         productcreate_tuple = dataclasses.astuple(product)
 
         # Insert ProductCreated event details 
-        insert_product_created = """ INSERT INTO productcreated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, PRODUCTNAME, PRICE) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+        insert_product_created = """ INSERT INTO productcreated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, PRODUCTNAME, PRODUCTTYPE, PRICE) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
         self.cursor.execute(insert_product_created, productcreate_tuple)
 
         # Check insertion
