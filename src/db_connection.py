@@ -430,7 +430,7 @@ class postgresDBClient:
                 id=store.newStoreAddress,
                 title=existing_title,
                 description = existing_description,
-                store_owner = store.newStoreOwner
+                store_owner = store.newStoreAddress
             )
 
             # NOTE: All products tied to previous store have been deleted and updated store is empty
