@@ -149,7 +149,7 @@ class postgresDBClient:
     #     return affiliate
 
     def add_stores(self, st: Store):
-        st_tuple = (st.id, st.title, st.description, st.store_owner)
+        st_tuple = (st.id, st.title, st.description, st.storeOwner)
 
         # Insert store details 
         insert_store = """ INSERT INTO stores (ID, TITLE, DESCRIPTION, STORE_OWNER) VALUES (%s,%s,%s,%s)"""
@@ -169,7 +169,7 @@ class postgresDBClient:
         self.logging.info(f"{count} Record(s) inserted successfully into Stores table")
 
     def add_products(self, prdt: Product):
-        prdt_tuple = (prdt.product_id, prdt.store_id, prdt.title, prdt.description, prdt.price, prdt.features, prdt.product_type)
+        prdt_tuple = (prdt.productName, prdt.storeAddress, prdt.title, prdt.description, prdt.price, prdt.features, prdt.productType)
 
         # Insert product details 
         insert_product = """ INSERT INTO products (PRODUCT_ID, STORE_ID, TITLE, DESCRIPTION, PRICE, FEATURES, PRODUCT_TYPE) VALUES (%s,%s,%s,%s,%s,%s,%s)"""
@@ -229,7 +229,7 @@ class postgresDBClient:
             id=store.id,
             title = store.title,
             description = store.description,
-            store_owner = store.store_owner,
+            store_owner = store.storeOwner,
         )
 
         # Update dictionary
@@ -243,7 +243,7 @@ class postgresDBClient:
     def update_product(self, product: Product):
         try:
             # Update by product_id and store_id
-            self.cursor.execute("UPDATE products SET title = %s, description = %s, features = %s WHERE product_id = %s AND store_id = %s", (product.title, product.description, self.to_array(product.features), product.product_id, product.store_id))
+            self.cursor.execute("UPDATE products SET title = %s, description = %s, features = %s WHERE product_id = %s AND store_id = %s", (product.title, product.description, self.to_array(product.features), product.productName, product.storeAddress))
         except Exception as e:
             error_msg = f"Unable to update product: Exception: {e}"
             self.logging.warning(error_msg)
@@ -257,18 +257,18 @@ class postgresDBClient:
 
         # Create new product
         new_product = Product(
-            product_id = product.product_id,
-            store_id = product.store_id,
+            product_id = product.productName,
+            store_id = product.storeAddress,
             title = product.title,
             description = product.description,
             price = product.price,
             features = product.features,
-            product_type = product.product_type
+            product_type = product.productType
         )
 
         # Update dictionary
         for current_product in self.products:
-            if(current_product.product_id == new_product.product_id):
+            if(current_product.productName == new_product.productName):
                 self.products.pop(current_product)
                 break
 
@@ -292,7 +292,7 @@ class postgresDBClient:
         self.logging.info(f"{rows_deleted} Record(s) deleted from Stores table")
         
     def delete_products(self, product: Product):
-        product_name = product.product_id
+        product_name = product.productName
 
         try:
             # Delete products by product_id
@@ -308,7 +308,7 @@ class postgresDBClient:
         self.logging.info(f" {rows_deleted} Record(s) deleted from Products table")
 
     def write_store_created(self, store: StoreCreated):
-        storecreate_tuple = (store.block_hash, store.transaction_hash, store.block_number, store.address, store.data,
+        storecreate_tuple = (store.blockHash, store.transactionHash, store.blockNumber, store.address, store.data,
                              store.transaction_idx, store.storeAddress, store.storeOwner)
 
         # Insert StoreCreated event details 
@@ -361,7 +361,7 @@ class postgresDBClient:
 
         # Remove store from dictionary and DB and also remove related products in store                
         for current_product in self.products:
-            if(current_product.store_id == store.storeAddress):
+            if(current_product.storeAddress == store.storeAddress):
                 self.products.pop(current_product)
                 self.delete_products(current_product) 
                 break
@@ -409,7 +409,7 @@ class postgresDBClient:
 
             # NOTE: All products tied to previous store have been deleted and updated store is empty
             for current_product in self.products:
-                if(current_product.store_id == store.storeAddress):
+                if(current_product.storeAddress == store.storeAddress):
                     self.products.pop(current_product)
                     self.delete_products(current_product)
                     break 
@@ -483,7 +483,7 @@ class postgresDBClient:
 
         # Remove product from dictionary and DB
         for current_product in self.products:
-            if(current_product.product_id == product.productName):
+            if(current_product.productName == product.productName):
                 self.products.pop(current_product)
                 self.delete_products(current_product)
                 break 
@@ -526,7 +526,7 @@ class postgresDBClient:
 
             # Remove old product from dictionary and DB and add new product
             for current_product in self.products:
-                if(current_product.product_id == product_update.productName):
+                if(current_product.productName == product_update.productName):
                     self.products.pop(current_product)
                     self.delete_products(current_product)
                     break 
@@ -543,7 +543,7 @@ class postgresDBClient:
         return '{' + ','.join(value) + '}'
 
     def write_payment_made(self, transaction: PaymentMade):
-        paymentmade_tuple = (transaction.block_hash, transaction.transaction_hash, transaction.block_number,
+        paymentmade_tuple = (transaction.blockHash, transaction.transactionHash, transaction.blockNumber,
                              transaction.address, transaction.data, transaction.transaction_idx, transaction.customer,
                              transaction.storeAddress, self.to_array(transaction.productNames))
 
@@ -563,7 +563,7 @@ class postgresDBClient:
         self.paymentmade.append(transaction)
 
     def write_refund_made(self, transaction: RefundMade):
-        refundmade_tuple = (transaction.block_hash, transaction.transaction_hash, transaction.block_number,
+        refundmade_tuple = (transaction.blockHash, transaction.transactionHash, transaction.blockNumber,
                             transaction.address, transaction.data, transaction.transaction_idx,
                             transaction.customer, transaction.storeAddress, self.to_array(transaction.product_names))
 

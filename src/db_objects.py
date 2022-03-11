@@ -28,7 +28,7 @@ class Store:
     id: str
     title: str
     description: str
-    store_owner: str
+    storeOwner: str
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Store):
@@ -42,29 +42,29 @@ class Store:
 
 @dataclass(init=True, repr=True, frozen=True)
 class Product:
-    product_id: str
-    store_id: str
+    productName: str
+    storeAddress: str
     title: str
     description: str
     price: int
     features: List[str]
-    product_type: int
+    productType: int
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Store):
-            if self.store_id == __o.store_id and self.product_id == __o.product_id:
+            if self.storeAddress == __o.store_id and self.productName == __o.product_id:
                 return True
         return False
 
     def __hash__(self) -> int:
-        return hash(self.product_id) ^ hash(self.store_id)
+        return hash(self.productName) ^ hash(self.storeAddress)
 
 
 @dataclass(init=True, repr=True)
 class FunnelEvent:
-    block_hash: str
-    transaction_hash: str
-    block_number: int
+    blockHash: str
+    transactionHash: str
+    blockNumber: int
     address: str
     data: str
     transaction_idx: int
@@ -135,6 +135,7 @@ class StoreUpdated(FunnelEvent):
     storeAddress: str
     newStoreAddress: str
     newStoreOwner: str
+
 
 @dataclass(init=True, repr = True)
 class AffiliateRegistered(FunnelEvent):

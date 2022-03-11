@@ -60,7 +60,7 @@ class PolygonNodeClient:
 
                 await asyncio.sleep(2)
 
-            all_event_outputs.sort(key=lambda x: (x.block_number, x.transaction_idx))
+            all_event_outputs.sort(key=lambda x: (x.blockNumber, x.transaction_idx))
 
             for cb in self.__event_callbacks.values():
                 cb(all_event_outputs)
@@ -85,7 +85,7 @@ class PolygonNodeClient:
 
                 await asyncio.sleep(2)
 
-            all_event_outputs.sort(key=lambda x: (x.block_number, x.transaction_idx))
+            all_event_outputs.sort(key=lambda x: (x.blockNumber, x.transaction_idx))
 
             for cb in self.__event_callbacks.values():
                 cb(all_event_outputs)
