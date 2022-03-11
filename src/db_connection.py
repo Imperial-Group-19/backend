@@ -1,11 +1,11 @@
-from typing import Dict, List
 import dataclasses
+from typing import Dict, List
+
 import psycopg2
-from db_objects import Store, User, Transaction, Product, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, ProductCreated, ProductRemoved, ProductUpdated
 
-from logging import Logger
+from db_objects import Store, Product, Affiliate, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, \
+    ProductCreated, ProductRemoved, ProductUpdated, AffiliateRegistered, OwnershipTransferred
 
-# TODO: Test for new smart contract
 
 class postgresDBClient:
     def __init__(self, logging):
@@ -31,12 +31,10 @@ class postgresDBClient:
         # Initialise stores, products, transactions, affiliates
         self.stores: Dict[Store, Store] = {}
         self.products: Dict[Product, Product] = {}
-        # TODO: uncomment and test for new smartcontract
-        # self.affiliates: Dict[Affiliate, Affiliate] = {}
+        self.affiliates: Dict[Affiliate, Affiliate] = {}
         self.paymentmade: List[PaymentMade] = [] #TODO: to send this information to frontend for analytics
         self.refundmade: List[RefundMade] = [] #TODO: to send this information to frontend for analytics
 
-        
     def connect(self): #testing function
         # Connection establishment
         self.conn = psycopg2.connect(
@@ -85,15 +83,13 @@ class postgresDBClient:
             # return boolean
             return self.cursor.rowcount > 0
 
-    # TODO: uncomment and test for new smart contract
-    # def check_affiliates(self, affiliate_address):
-    #      # Query
-    #     self.cursor.execute("SELECT id FROM affiliates WHERE affiliate_address = %s", (affiliate_address, ))
-    #     self.logging.info(f"The number of existing affiliates: {self.cursor.rowcount}", )
+    def check_affiliates(self, affiliate_address):
+         # Query
+        self.cursor.execute("SELECT id FROM affiliates WHERE affiliate_address = %s", (affiliate_address, ))
+        self.logging.info(f"The number of existing affiliates: {self.cursor.rowcount}", )
 
-    #     # return boolean
-    #     return self.cursor.rowcount > 0
-
+        # return boolean
+        return self.cursor.rowcount > 0
 
     def get_stores_db(self, store_id, dynamic = False):
         # Query
@@ -116,25 +112,21 @@ class postgresDBClient:
 
             return title, description
 
-
     def get_products_db(self, product_id, store_id, dynamic = False):
         # Query
         if not dynamic:
-            self.cursor.execute("SELECT product_id, store_id, title, description, price, features FROM products WHERE product_id = %s AND store_id = %s", (product_id, store_id))
-            #TODO: uncomment for product_type
-            #self.cursor.execute("SELECT product_id, store_id, title, description, price, features, product_type FROM products WHERE product_id = %s AND store_id = %s", (product_id, store_id))
+            self.cursor.execute("SELECT product_id, store_id, title, description, price, features, product_type FROM products WHERE product_id = %s AND store_id = %s", (product_id, store_id))
             self.logging.info(f"{self.cursor.rowcount} products retrieved", )
 
             row = self.cursor.fetchone()
-            (product_id, store_id, title, description, price, features) = row
-            product = Product(product_id, store_id, title, description, price, features)
+            (product_id, store_id, title, description, price, features, productType) = row
+            product = Product(productName=product_id, storeAddress=store_id, title=title, description=description, price=price, features=features,
+                              productType=productType)
 
             return product
         
         else:
-            self.cursor.execute("SELECT title, description, features FROM products WHERE product_id = %s AND store_id = %s", (product_id, store_id))
-            #TODO: uncomment for product_type
-            #self.cursor.execute("SELECT title, description, features, product_type FROM products WHERE product_id = %s AND store_id = %s", (product_id, store_id))
+            self.cursor.execute("SELECT title, description, features, product_type FROM products WHERE product_id = %s AND store_id = %s", (product_id, store_id))
             self.logging.info(f"{self.cursor.rowcount} dynamic fields of product retrieved", )
 
             row = self.cursor.fetchone()
@@ -142,20 +134,19 @@ class postgresDBClient:
 
             return title, description, features
 
-    # TODO: uncomment and test for new smart contract
-    # def get_affiliates_db(self, affiliate_address, dynamic = False):
-    #     # Query
-    #     self.cursor.execute("SELECT affiliate_address FROM affiliates WHERE affiliate_address = %s", (affiliate_address, ))
-    #     self.logging.info(f"{self.cursor.rowcount} affiliates retrieved", )
+    def get_affiliates_db(self, affiliate_address, dynamic = False):
+        # Query
+        self.cursor.execute("SELECT affiliate_address FROM affiliates WHERE affiliate_address = %s", (affiliate_address, ))
+        self.logging.info(f"{self.cursor.rowcount} affiliates retrieved", )
 
-    #     row = self.cursor.fetchone()
-    #     (affiliate_address) = row
-    #     affiliate = Affiliate(affiliate_address)
+        row = self.cursor.fetchone()
+        (affiliate_address) = row
+        affiliate = Affiliate(affiliate_address)
         
-    #     return affiliate
+        return affiliate
 
     def add_stores(self, st: Store):
-        st_tuple = dataclasses.astuple(st)
+        st_tuple = (st.id, st.title, st.description, st.storeOwner)
 
         # Insert store details 
         insert_store = """ INSERT INTO stores (ID, TITLE, DESCRIPTION, STORE_OWNER) VALUES (%s,%s,%s,%s)"""
@@ -169,21 +160,16 @@ class postgresDBClient:
         except Exception as e:
             error_msg = f"Unable to add new store: Exception: {e}"
             self.logging.warning(error_msg)
-        
 
         # Check insertion
         count = self.cursor.rowcount
         self.logging.info(f"{count} Record(s) inserted successfully into Stores table")
 
-        
-
     def add_products(self, prdt: Product):
-        prdt_tuple = dataclasses.astuple(prdt)
+        prdt_tuple = (prdt.productName, prdt.storeAddress, prdt.title, prdt.description, prdt.price, prdt.features, prdt.productType)
 
         # Insert product details 
-        # TODO: uncomment for product_type
-        insert_product = """ INSERT INTO products (PRODUCT_ID, STORE_ID, TITLE, DESCRIPTION, PRICE, FEATURES) VALUES (%s,%s,%s,%s,%s,%s)"""
-        #insert_product = """ INSERT INTO products (PRODUCT_ID, STORE_ID, TITLE, DESCRIPTION, PRICE, FEATURES, PRODUCT_TYPE) VALUES (%s,%s,%s,%s,%s,%s,%s)"""
+        insert_product = """ INSERT INTO products (PRODUCT_ID, STORE_ID, TITLE, DESCRIPTION, PRICE, FEATURES, PRODUCT_TYPE) VALUES (%s,%s,%s,%s,%s,%s,%s)"""
 
         try:
             self.cursor.execute(insert_product, prdt_tuple)
@@ -194,35 +180,31 @@ class postgresDBClient:
         except Exception as e:
             error_msg = f"Unable to add new product: Exception: {e}"
             self.logging.warning(error_msg)
-        
-            
+
         # Check insertion
         count = self.cursor.rowcount
         self.logging.info(f"{count} Record(s) inserted successfully into Products table")
 
-    # TODO: uncomment and test for new smart contract
-    # def add_affiliates(self, affiliate: Affiliates):
-    #     affiliate_tuple = dataclasses.astuple(st)
+    def add_affiliates(self, affiliate: Affiliate):
+        affiliate_tuple = dataclasses.astuple(affiliate)
 
-    #     # Insert affiliate details 
-    #     insert_affiliate = """ INSERT INTO affiliates (AFFILIATE_ADDRESS) VALUES (%s)"""
+        # Insert affiliate details 
+        insert_affiliate = """ INSERT INTO affiliates (AFFILIATE_ADDRESS) VALUES (%s)"""
 
-    #     try:
-    #         self.cursor.execute(insert_affiliate, affiliate_tuple)
+        try:
+            self.cursor.execute(insert_affiliate, affiliate_tuple)
 
-    #         # Commit changes to db
-    #         self.conn.commit()
+            # Commit changes to db
+            self.conn.commit()
 
-    #     except Exception as e:
-    #         error_msg = f"Unable to add new affiliate: Exception: {e}"
-    #         self.logging.warning(error_msg)
+        except Exception as e:
+            error_msg = f"Unable to add new affiliate: Exception: {e}"
+            self.logging.warning(error_msg)
         
+        # Check insertion
+        count = self.cursor.rowcount
+        self.logging.info(f"{count} Record(s) inserted successfully into Affiliates table")
 
-    #     # Check insertion
-    #     count = self.cursor.rowcount
-    #     self.logging.info(f"{count} Record(s) inserted successfully into Affiliates table")
-
-        
     def update_store(self, store: Store):
         try:
             # Update by store_address
@@ -232,7 +214,6 @@ class postgresDBClient:
         except Exception as e:
             error_msg = f"Unable to update store: Exception: {e}"
             self.logging.warning(error_msg)
-        
 
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
@@ -243,7 +224,7 @@ class postgresDBClient:
             id=store.id,
             title = store.title,
             description = store.description,
-            store_owner = store.store_owner,
+            storeOwner=store.storeOwner,
         )
 
         # Update dictionary
@@ -254,18 +235,13 @@ class postgresDBClient:
 
         self.stores[new_store] = new_store
 
-
     def update_product(self, product: Product):
-        product_list = list(dataclasses.asdict(product).values()) 
-        features = self.to_array(product_list[-1])
-
         try:
             # Update by product_id and store_id
-            self.cursor.execute("UPDATE products SET title = %s, description = %s, features = %s WHERE product_id = %s AND store_id = %s", (product.title, product.description, features, product.product_id, product.store_id))
+            self.cursor.execute("UPDATE products SET title = %s, description = %s, features = %s WHERE product_id = %s AND store_id = %s", (product.title, product.description, self.to_array(product.features), product.productName, product.storeAddress))
         except Exception as e:
             error_msg = f"Unable to update product: Exception: {e}"
             self.logging.warning(error_msg)
-        
 
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
@@ -275,25 +251,23 @@ class postgresDBClient:
         self.conn.commit()
 
         # Create new product
-        # TODO: uncomment for product_type
         new_product = Product(
-            product_id = product.product_id,
-            store_id = product.store_id,
-            title = product.title,
-            description = product.description,
-            price = product.price,
-            features = product.features,
-            # product_type = product.product_type
+            productName=product.productName,
+            storeAddress=product.storeAddress,
+            title=product.title,
+            description=product.description,
+            price=product.price,
+            features=product.features,
+            productType=product.productType
         )
 
         # Update dictionary
         for current_product in self.products:
-            if(current_product.product_id == new_product.product_id):
+            if(current_product.productName == new_product.productName):
                 self.products.pop(current_product)
                 break
 
         self.products[new_product] = new_product
-
 
     def delete_stores(self, store: Store):
         store_address = store.id
@@ -311,11 +285,9 @@ class postgresDBClient:
         # get the number of updated rows
         rows_deleted = self.cursor.rowcount
         self.logging.info(f"{rows_deleted} Record(s) deleted from Stores table")
-
-
         
     def delete_products(self, product: Product):
-        product_name = product.product_id
+        product_name = product.productName
 
         try:
             # Delete products by product_id
@@ -330,10 +302,9 @@ class postgresDBClient:
         rows_deleted = self.cursor.rowcount
         self.logging.info(f" {rows_deleted} Record(s) deleted from Products table")
 
-
-
     def write_store_created(self, store: StoreCreated):
-        storecreate_tuple = dataclasses.astuple(store)
+        storecreate_tuple = (store.blockHash, store.transactionHash, store.blockNumber, store.address, store.data,
+                             store.transaction_idx, store.storeAddress, store.storeOwner)
 
         # Insert StoreCreated event details 
         insert_store_created = """ INSERT INTO storecreated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, STOREOWNER) VALUES (%s,%s,%s,%s,%s,%s,%s, %s)"""
@@ -358,8 +329,8 @@ class postgresDBClient:
             new_store = Store(
                 id=store.storeAddress,
                 title="",
-                description = "",
-                store_owner = store.storeOwner,
+                description="",
+                storeOwner=store.storeOwner,
             )
 
             # Add to dictionary 
@@ -367,7 +338,6 @@ class postgresDBClient:
 
             # Add to dynamic store table in DB
             self.add_stores(new_store)
-
 
     def write_store_removed(self, store: StoreRemoved): 
         storeremove_tuple = dataclasses.astuple(store)
@@ -386,7 +356,7 @@ class postgresDBClient:
 
         # Remove store from dictionary and DB and also remove related products in store                
         for current_product in self.products:
-            if(current_product.store_id == store.storeAddress):
+            if(current_product.storeAddress == store.storeAddress):
                 self.products.pop(current_product)
                 self.delete_products(current_product) 
                 break
@@ -396,7 +366,6 @@ class postgresDBClient:
                 self.stores.pop(current_store)
                 self.delete_stores(current_store)
                 break 
-
 
     def write_store_updated(self, store: StoreUpdated): 
         storeupdate_tuple = dataclasses.astuple(store)
@@ -430,12 +399,12 @@ class postgresDBClient:
                 id=store.newStoreAddress,
                 title=existing_title,
                 description = existing_description,
-                store_owner = store.newStoreAddress
+                storeOwner=store.newStoreAddress
             )
 
             # NOTE: All products tied to previous store have been deleted and updated store is empty
             for current_product in self.products:
-                if(current_product.store_id == store.storeAddress):
+                if(current_product.storeAddress == store.storeAddress):
                     self.products.pop(current_product)
                     self.delete_products(current_product)
                     break 
@@ -452,14 +421,12 @@ class postgresDBClient:
         
         else:
             self.logging.info(f"{store.storeAddress} id: store does not exist. To add store first.")
-    
-
 
     def write_product_created(self, product: ProductCreated):
         productcreate_tuple = dataclasses.astuple(product)
 
         # Insert ProductCreated event details 
-        insert_product_created = """ INSERT INTO productcreated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, PRODUCTNAME, PRICE) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+        insert_product_created = """ INSERT INTO productcreated (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, PRODUCTNAME, PRODUCTTYPE, PRICE) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
         self.cursor.execute(insert_product_created, productcreate_tuple)
 
         # Check insertion
@@ -477,15 +444,14 @@ class postgresDBClient:
         
         else:
             # Create new product
-            # TODO: uncomment for product_type
             new_product = Product(
-                product_id = product.productName,
-                store_id = product.storeAddress,
-                title = " ",
-                description = " ",
-                price = product.price,
-                features = [],
-                #product_type = product.productType
+                productName=product.productName,
+                storeAddress=product.storeAddress,
+                title="",
+                description="",
+                price=product.price,
+                features=[],
+                productType=product.productType
             )
 
             # Add to dictionary
@@ -493,7 +459,6 @@ class postgresDBClient:
 
             # Add to dynamic product table in DB
             self.add_products(new_product)
-
 
     def write_product_removed(self, product: ProductRemoved): 
         productremove_tuple = dataclasses.astuple(product)
@@ -512,11 +477,10 @@ class postgresDBClient:
 
         # Remove product from dictionary and DB
         for current_product in self.products:
-            if(current_product.product_id == product.productName):
+            if current_product.productName == product.productName:
                 self.products.pop(current_product)
                 self.delete_products(current_product)
                 break 
-
 
     def write_product_updated(self, product_update: ProductUpdated): 
         productupdate_tuple = dataclasses.astuple(product_update)
@@ -543,24 +507,22 @@ class postgresDBClient:
             existing_title, existing_description, existing_features = self.get_products_db(product_update.productName, product_update.storeAddress, dynamic = True)
             
             # Create new product
-            # TODO: uncomment for product_type
             new_product = Product(
-                product_id = product_update.productName,
-                store_id = product_update.storeAddress,
-                title = existing_title,
-                description = existing_description,
-                price = product_update.newPrice,
-                features = existing_features,
-                #product_type = product.productType
+                productName=product_update.productName,
+                storeAddress=product_update.storeAddress,
+                title=existing_title,
+                description=existing_description,
+                price=product_update.newPrice,
+                features=existing_features,
+                productType=0
             )
 
             # Remove old product from dictionary and DB and add new product
-            for current_product in self.products:
-                if(current_product.product_id == product_update.productName):
-                    self.products.pop(current_product)
-                    self.delete_products(current_product)
-                    break 
-            
+            if new_product in self.products:
+                old_product = self.products.get(new_product)
+                new_product.productType = old_product.productType
+                self.delete_products(old_product)
+
             self.products[new_product] = new_product
 
             # Add to product table in DB
@@ -568,19 +530,16 @@ class postgresDBClient:
 
         else:
             self.logging.info(f"{product_update.productName} id: product does not exist. To add product first.")
-            
-    
+
     def to_array(self, value):
         return '{' + ','.join(value) + '}'
 
-    def write_payment_made(self, transaction: PaymentMade): 
-        paymentmade_list = list(dataclasses.asdict(transaction).values()) 
+    def write_payment_made(self, transaction: PaymentMade):
+        paymentmade_tuple = (transaction.blockHash, transaction.transactionHash, transaction.blockNumber,
+                             transaction.address, transaction.data, transaction.transaction_idx, transaction.customer,
+                             transaction.storeAddress, self.to_array(transaction.productNames))
 
-        paymentmade_list[-1] = self.to_array(paymentmade_list[-1])
-        
-        paymentmade_tuple = tuple(paymentmade_list)
-
-        # Insert PaymentMade event details 
+        # Insert PaymentMade event details
         insert_payment_made = """ INSERT INTO paymentmade (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, CUSTOMER, STOREADDRESS, PRODUCTNAMES) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
 
         self.cursor.execute(insert_payment_made, paymentmade_tuple)
@@ -596,11 +555,9 @@ class postgresDBClient:
         self.paymentmade.append(transaction)
 
     def write_refund_made(self, transaction: RefundMade):
-        refundmade_list = list(dataclasses.asdict(transaction).values()) 
-
-        refundmade_list[-1] = self.to_array(refundmade_list[-1])
-        
-        refundmade_tuple = tuple(refundmade_list)
+        refundmade_tuple = (transaction.blockHash, transaction.transactionHash, transaction.blockNumber,
+                            transaction.address, transaction.data, transaction.transaction_idx,
+                            transaction.customer, transaction.storeAddress, self.to_array(transaction.product_names))
 
         # Insert RefundMade event details 
         insert_refund_made = """ INSERT INTO refundmade (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, CUSTOMER, STOREADDRESS, PRODUCTNAMES) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
@@ -617,56 +574,53 @@ class postgresDBClient:
         # Add to list
         self.refundmade.append(transaction)
 
-    # TODO: uncomment and test for new smart contract
-    # TODO: add affiliate_registered event table to DB
-    # def write_affiliate_registered(self, affiliate: AffiliateRegistered): 
-    #     affiliate_tuple = dataclasses.astuple(affiliate)
+    def write_affiliate_registered(self, affiliate: AffiliateRegistered): 
+        affiliate_tuple = dataclasses.astuple(affiliate)
 
-    #     # Insert AffiliateRegistered event details 
-    #     insert_affiliate_registered = """ INSERT INTO affiliateregistered (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, AFFILIATEADDRESS) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"""
+        # Insert AffiliateRegistered event details 
+        insert_affiliate_registered = """ INSERT INTO affiliateregistered (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, STOREADDRESS, AFFILIATEADDRESS) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"""
 
-    #     self.cursor.execute(insert_affiliate_registered, affiliate_tuple)
+        self.cursor.execute(insert_affiliate_registered, affiliate_tuple)
 
-    #     # Check insertion
-    #     count = self.cursor.rowcount
-    #     self.logging.info(f"{count} Record(s) inserted successfully into AffiliateRegistered table")
+        # Check insertion
+        count = self.cursor.rowcount
+        self.logging.info(f"{count} Record(s) inserted successfully into AffiliateRegistered table")
 
-    #     # Commit changes
-    #     self.conn.commit()
+        # Commit changes
+        self.conn.commit()
 
-    #     # Add affiliate to dynamic affiliate table
-    #     if self.check_affiliates(affiliate.affiliateAddress):
-    #         existing_affiliate = self.get_affiliates_db(affiliate.affiliateAddress)
-    #         self.affiliates[existing_affiliate] = existing_affiliate
-    #         self.logging.info(f"{affiliate.affiliateAddress} id: affiliate exists")
+        # Add affiliate to dynamic affiliate table
+        if self.check_affiliates(affiliate.affiliateAddress):
+            existing_affiliate = self.get_affiliates_db(affiliate.affiliateAddress)
+            self.affiliates[existing_affiliate] = existing_affiliate
+            self.logging.info(f"{affiliate.affiliateAddress} id: affiliate exists")
         
-    #     else:
-    #         # Create new affiliate
-    #         new_affiliate = Affiliate(
-    #             affiliate_address=affiliate.affiliateAddress,
-    #         )
+        else:
+            # Create new affiliate
+            new_affiliate = Affiliate(
+                affiliateAddress=affiliate.affiliateAddress,
+            )
 
-    #         # Add to dictionary 
-    #         self.affiliates[new_affiliate] = new_affiliate
+            # Add to dictionary 
+            self.affiliates[new_affiliate] = new_affiliate
 
-    #         # Add to dynamic affiliate table in DB
-    #         self.add_affiliates(new_affiliate)
+            # Add to dynamic affiliate table in DB
+            self.add_affiliates(new_affiliate)
 
-    # TODO: uncomment and test for new smart contract - NOTE: no actions taken except to record event in db
-    # def write_ownership_transferred(self, store: OwnershipTransferred): 
-    #     store_tuple = dataclasses.astuple(store)
+    def write_ownership_transferred(self, store: OwnershipTransferred): 
+        store_tuple = dataclasses.astuple(store)
 
-    #     # Insert OwnershipTransferred event details 
-    #     insert_ownership_transferred = """ INSERT INTO ownershiptransferred (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, PREVIOUSOWNER, NEWOWNER) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"""
+        # Insert OwnershipTransferred event details 
+        insert_ownership_transferred = """ INSERT INTO ownershiptransferred (BLOCK_HASH, TRANSACTION_HASH, BLOCK_NUMBER, ADDRESS, DATA, TRANSACTION_IDX, PREVIOUSOWNER, NEWOWNER) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"""
 
-    #     self.cursor.execute(insert_ownership_transferred, store_tuple)
+        self.cursor.execute(insert_ownership_transferred, store_tuple)
 
-    #     # Check insertion
-    #     count = self.cursor.rowcount
-    #     self.logging.info(f"{count} Record(s) inserted successfully into OwnershipTransferred table")
+        # Check insertion
+        count = self.cursor.rowcount
+        self.logging.info(f"{count} Record(s) inserted successfully into OwnershipTransferred table")
 
-    #     # Commit changes
-    #     self.conn.commit()
+        # Commit changes
+        self.conn.commit()
 
 
     def get_products(self):

@@ -58,9 +58,9 @@ class PolygonNodeClient:
                 if valid_output:
                     all_event_outputs.extend(event_outputs)
 
-                await asyncio.sleep(5)
+                await asyncio.sleep(2)
 
-            all_event_outputs.sort(key=lambda x: (x.block_number, x.transaction_idx))
+            all_event_outputs.sort(key=lambda x: (x.blockNumber, x.transaction_idx))
 
             for cb in self.__event_callbacks.values():
                 cb(all_event_outputs)
@@ -74,21 +74,24 @@ class PolygonNodeClient:
             if latest_block is None:
                 raise Exception(f"Failed to fetch latest block!")
 
+            max_block_val = self.__start_block + 1000
+            latest_block = min(latest_block, max_block_val)
+
             all_event_outputs = []
             for event in self.get_events():
                 valid_output, event_outputs = await self.fetch_event(event=event, from_block=self.__start_block, to_block=latest_block)
                 if valid_output:
                     all_event_outputs.extend(event_outputs)
 
-                await asyncio.sleep(5)
+                await asyncio.sleep(2)
 
-            all_event_outputs.sort(key=lambda x: (x.block_number, x.transaction_idx))
+            all_event_outputs.sort(key=lambda x: (x.blockNumber, x.transaction_idx))
 
             for cb in self.__event_callbacks.values():
                 cb(all_event_outputs)
 
             self.__start_block = latest_block
-            await asyncio.sleep(5)
+            await asyncio.sleep(3)
 
     def register_event_callback(self, idx: str, cb):
         self.__event_callbacks[idx] = cb
@@ -167,10 +170,10 @@ class PolygonNodeClient:
                     event_data[param_name] = decoded_info[idx]
                 output_result.append(
                     FunnelContractEvent(
-                        block_hash=res["blockHash"],
-                        transaction_hash=res["transactionHash"],
+                        blockHash=res["blockHash"],
+                        transactionHash=res["transactionHash"],
                         address=res["address"],
-                        block_number=int(res["blockNumber"], 16),
+                        blockNumber=int(res["blockNumber"], 16),
                         data=res["data"],
                         transaction_idx=int(res["transactionIndex"], 16),
                         event=abi["name"],
@@ -191,10 +194,13 @@ if __name__ == "__main__":
     polygon = PolygonNodeClient(
         event_loop=loop,
         logger=logging, https_url="https://rpc-mumbai.maticvigil.com",
-        contract_address="0xaE7b635D1C9832Ee9c4ede4C5b261c61b79BD728",
+        contract_address="0xF9cc7D93484Cf2C64e2892d332F820495D2BDC2e",
         contract_abi_file="funnel_abi.json",
         start_block=24934959
     )
+
+    for event in polygon.get_events():
+        print(event)
 
     def dummy_callback(event):
         print(event)
