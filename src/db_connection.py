@@ -122,8 +122,9 @@ class postgresDBClient:
             self.logging.info(f"{self.cursor.rowcount} products retrieved", )
 
             row = self.cursor.fetchone()
-            (product_id, store_id, title, description, price, features) = row
-            product = Product(product_id, store_id, title, description, price, features)
+            (product_id, store_id, title, description, price, features, productType) = row
+            product = Product(productName=product_id, storeAddress=store_id, title=title, description=description, price=price, features=features,
+                              productType=productType)
 
             return product
         
