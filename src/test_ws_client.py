@@ -6,10 +6,9 @@ import asyncio
 from autobahn.asyncio.websocket import WebSocketClientProtocol, \
     WebSocketClientFactory
 
-from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, WSMsgType, Update
-from message_conversion import MessageConverter
-
 from db_objects import Product, Store
+from message_conversion import MessageConverter
+from message_protocol import Subscription, DBType, ResponseMessage, WSMsgType, Update
 
 
 class MyClientProtocol(WebSocketClientProtocol):
@@ -24,7 +23,8 @@ class MyClientProtocol(WebSocketClientProtocol):
 
     def onOpen(self):
         print("WebSocket connection open.")
-        sub_msg = Subscription(id=0, jsonrpc="2.0", method=Subscription.method, params=[DBType.products.value, DBType.stores.value])
+        sub_msg = Subscription(id=0, jsonrpc="2.0", method=Subscription.method,
+                               params=[DBType.products.value, DBType.stores.value, DBType.paymentMade.value, DBType.refundMade.value])
         bytes_msg = MessageConverter.serialise_message(sub_msg)
         self.sendMessage(payload=bytes_msg, isBinary=True)
 

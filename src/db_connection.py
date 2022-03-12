@@ -13,9 +13,9 @@ class postgresDBClient:
         self.conn = psycopg2.connect(
             database='salesfunnel',
             user='postgres',
-            password = 'crypto',
+            password='crypto',
             host='127.0.0.1', 
-            port= '5432'
+            port='5432'
         )
         
         self.conn.autocommit = True
@@ -32,10 +32,10 @@ class postgresDBClient:
         self.stores: Dict[Store, Store] = {}
         self.products: Dict[Product, Product] = {}
         self.affiliates: Dict[Affiliate, Affiliate] = {}
-        self.paymentmade: List[PaymentMade] = [] #TODO: to send this information to frontend for analytics
-        self.refundmade: List[RefundMade] = [] #TODO: to send this information to frontend for analytics
+        self.payments_made: List[PaymentMade] = []  # TODO: to send this information to frontend for analytics
+        self.refunds_made: List[RefundMade] = []  # TODO: to send this information to frontend for analytics
 
-    def connect(self): #testing function
+    def connect(self):
         # Connection establishment
         self.conn = psycopg2.connect(
             database='salesfunnel',
@@ -84,14 +84,14 @@ class postgresDBClient:
             return self.cursor.rowcount > 0
 
     def check_affiliates(self, affiliate_address):
-         # Query
+        # Query
         self.cursor.execute("SELECT id FROM affiliates WHERE affiliate_address = %s", (affiliate_address, ))
         self.logging.info(f"The number of existing affiliates: {self.cursor.rowcount}", )
 
         # return boolean
         return self.cursor.rowcount > 0
 
-    def get_stores_db(self, store_id, dynamic = False):
+    def get_stores_db(self, store_id, dynamic=False):
         # Query
         if not dynamic:
             self.cursor.execute("SELECT id, title, description, store_owner FROM stores WHERE id = %s", (store_id, ))
@@ -100,7 +100,6 @@ class postgresDBClient:
             row = self.cursor.fetchone()
             (id, title, description, store_owner) = row
             store = Store(id, title, description, store_owner)
-            
             return store
         
         else:
@@ -205,7 +204,10 @@ class postgresDBClient:
         count = self.cursor.rowcount
         self.logging.info(f"{count} Record(s) inserted successfully into Affiliates table")
 
-    def update_store(self, store: Store):
+    def update_store(self, store: Store) -> bool:
+        if not self.does_store_exist(store):
+            return False
+
         try:
             # Update by store_address
             self.cursor.execute("UPDATE stores SET title = %s, description = %s WHERE id = %s", (store.title, store.description, store.id))
@@ -218,24 +220,13 @@ class postgresDBClient:
         # get the number of updated stores
         rows_updated = self.cursor.rowcount
         self.logging.info(f"{rows_updated} Record(s) updated on Stores table")
+        self.stores[store] = store
+        return True
 
-        # Create new store
-        new_store = Store(
-            id=store.id,
-            title = store.title,
-            description = store.description,
-            storeOwner=store.storeOwner,
-        )
+    def update_product(self, product: Product) -> bool:
+        if not self.does_product_exist(product):
+            return False
 
-        # Update dictionary
-        for current_store in self.stores:
-                if(current_store.id == new_store.id):
-                    self.stores.pop(current_store)
-                    break
-
-        self.stores[new_store] = new_store
-
-    def update_product(self, product: Product):
         try:
             # Update by product_id and store_id
             self.cursor.execute("UPDATE products SET title = %s, description = %s, features = %s WHERE product_id = %s AND store_id = %s", (product.title, product.description, self.to_array(product.features), product.productName, product.storeAddress))
@@ -249,38 +240,20 @@ class postgresDBClient:
 
         # Commit the changes to the database
         self.conn.commit()
-
-        # Create new product
-        new_product = Product(
-            productName=product.productName,
-            storeAddress=product.storeAddress,
-            title=product.title,
-            description=product.description,
-            price=product.price,
-            features=product.features,
-            productType=product.productType
-        )
-
-        # Update dictionary
-        for current_product in self.products:
-            if(current_product.productName == new_product.productName):
-                self.products.pop(current_product)
-                break
-
-        self.products[new_product] = new_product
+        self.products[product] = product
+        return True
 
     def delete_stores(self, store: Store):
         store_address = store.id
         
         try:        
-           # Delete store by store_address
+            # Delete store by store_address
             self.cursor.execute("DELETE FROM stores WHERE id = %s", (store_address,))
             # Commit the changes to the database
             self.conn.commit()
         except Exception as e:
             error_msg = f"Unable to delete store: Exception: {e}"
             self.logging.warning(error_msg)
-        
 
         # get the number of updated rows
         rows_deleted = self.cursor.rowcount
@@ -356,13 +329,13 @@ class postgresDBClient:
 
         # Remove store from dictionary and DB and also remove related products in store                
         for current_product in self.products:
-            if(current_product.storeAddress == store.storeAddress):
+            if current_product.storeAddress == store.storeAddress:
                 self.products.pop(current_product)
                 self.delete_products(current_product) 
                 break
                 
         for current_store in self.stores:
-            if(current_store.id == store.storeAddress):
+            if current_store.id == store.storeAddress:
                 self.stores.pop(current_store)
                 self.delete_stores(current_store)
                 break 
@@ -404,13 +377,13 @@ class postgresDBClient:
 
             # NOTE: All products tied to previous store have been deleted and updated store is empty
             for current_product in self.products:
-                if(current_product.storeAddress == store.storeAddress):
+                if current_product.storeAddress == store.storeAddress:
                     self.products.pop(current_product)
                     self.delete_products(current_product)
                     break 
 
             for current_store in self.stores:
-                if(current_store.id == store.storeAddress):
+                if current_store.id == store.storeAddress:
                     self.stores.pop(current_store)
                     self.delete_stores(current_store) 
                     break
@@ -418,7 +391,6 @@ class postgresDBClient:
             self.stores[new_store] = new_store
             self.add_stores(new_store)
 
-        
         else:
             self.logging.info(f"{store.storeAddress} id: store does not exist. To add store first.")
 
@@ -552,7 +524,7 @@ class postgresDBClient:
         self.conn.commit()
 
         # Add to list
-        self.paymentmade.append(transaction)
+        self.payments_made.append(transaction)
 
     def write_refund_made(self, transaction: RefundMade):
         refundmade_tuple = (transaction.blockHash, transaction.transactionHash, transaction.blockNumber,
@@ -572,7 +544,7 @@ class postgresDBClient:
         self.conn.commit()
 
         # Add to list
-        self.refundmade.append(transaction)
+        self.refunds_made.append(transaction)
 
     def write_affiliate_registered(self, affiliate: AffiliateRegistered): 
         affiliate_tuple = dataclasses.astuple(affiliate)
@@ -622,12 +594,27 @@ class postgresDBClient:
         # Commit changes
         self.conn.commit()
 
+    def get_products(self) -> List[Product]:
+        return list(self.products.values())
 
-    def get_products(self):
-        return self.products.values()
+    def get_stores(self) -> List[Store]:
+        return list(self.stores.values())
 
-    def get_stores(self):
-        return self.stores.values()
+    def get_payments_made(self) -> List[PaymentMade]:
+        return self.payments_made
+
+    def get_refunds_made(self) -> List[RefundMade]:
+        return self.refunds_made
+
+    def does_product_exist(self, product: Product) -> bool:
+        if product in self.products:
+            return True
+        return False
+
+    def does_store_exist(self, store: Store) -> bool:
+        if store in self.stores:
+            return True
+        return False
 
 
 # if __name__ == "__main__":

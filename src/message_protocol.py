@@ -6,6 +6,8 @@ from typing import Any, List
 class DBType(Enum):
     stores   = "stores"
     products = "products"
+    paymentMade = "paymentMade"
+    refundMade = "refundMade"
 
 
 class WSMsgType(Enum):

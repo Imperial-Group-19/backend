@@ -1,16 +1,16 @@
 import asyncio
 import json
-import operator
 from logging import Logger
 from typing import List
-from hexbytes import HexBytes
 
+from eth_abi import decode_abi
 from eth_typing.evm import ChecksumAddress
+from hexbytes import HexBytes
 from web3 import Web3, HTTPProvider
 from web3._utils.filters import construct_event_filter_params
 from web3._utils.rpc_abi import RPC
 from web3.contract import ContractEvent, Contract
-from eth_abi import decode_abi
+
 from db_objects import FunnelContractEvent
 from https_connection import HTTPSConnection
 

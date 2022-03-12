@@ -7,7 +7,7 @@ import asyncio
 import dataclasses
 from getpass import getpass
 from logging import Logger
-from typing import Union, Dict, List
+from typing import Union, Dict, List, Any
 
 import ujson
 from autobahn.asyncio.websocket import WebSocketServerProtocol, WebSocketServerFactory
@@ -81,6 +81,8 @@ class WebSocketServer(WebSocketServerFactory):
 
         self.__products_counter = 0
         self.__stores_counter = 0
+        self.__payments_made_counter = 0
+        self.__refunds_made_counter = 0
 
         # add db client
         self.db_connect = postgresDBClient(self.logging)
@@ -240,6 +242,12 @@ class WebSocketServer(WebSocketServerFactory):
         elif sub_type == DBType.products:
             msg_counter = self.__products_counter
             params = [DBType.products.value, [item.__dict__ for item in self.db_connect.get_products()]]
+        elif sub_type == DBType.refundMade:
+            msg_counter = self.__refunds_made_counter
+            params = [DBType.refundMade.value, [item.__dict__ for item in self.db_connect.get_refunds_made()]]
+        elif sub_type == DBType.paymentMade:
+            msg_counter = self.__payments_made_counter
+            params = [DBType.paymentMade.value, [item.__dict__ for item in self.db_connect.get_payments_made()]]
         else:
             raise Exception("Unrecognised sub snapshot")
 
@@ -268,30 +276,63 @@ class WebSocketServer(WebSocketServerFactory):
     def write_db(self, init_obj):
         if isinstance(init_obj, StoreCreated):
             self.db_connect.write_store_created(init_obj)
+            self.send_store_snapshot()
+
         elif isinstance(init_obj, StoreRemoved):
             self.db_connect.write_store_removed(init_obj)
+            self.send_store_snapshot()
+
         elif isinstance(init_obj, StoreUpdated):
             self.db_connect.write_store_updated(init_obj)
+            self.send_store_snapshot()
+
         elif isinstance(init_obj, ProductCreated):
             self.db_connect.write_product_created(init_obj)
+            self.send_product_snapshot()
+
         elif isinstance(init_obj, ProductRemoved):
             self.db_connect.write_product_removed(init_obj)
+            self.send_product_snapshot()
+
         elif isinstance(init_obj, ProductUpdated):
             self.db_connect.write_product_updated(init_obj)
+            self.send_product_snapshot()
+
         elif isinstance(init_obj, PaymentMade):
             self.db_connect.write_payment_made(init_obj)
+            self.send_payments_made_snapshot()
+
         elif isinstance(init_obj, RefundMade):
             self.db_connect.write_refund_made(init_obj)
+            self.send_refunds_made_snapshot()
 
-    def update_product(self, product: Product):
-        self.db_connect.update_product(product)
-        # self.db_connect.products[product] = product
-        return True
+    def update_product(self, product: Product) -> bool:
+        return self.db_connect.update_product(product)
 
-    def update_store(self, store: Store):
-        self.db_connect.update_store(store)
-        # self.db_connect.stores[store] = store
-        return True
+    def update_store(self, store: Store) -> bool:
+        return self.db_connect.update_store(store)
+
+    def send_specific_snapshot(self, msg_counter: int, snapshot_type: DBType, list_items: List[Any]):
+        msg_counter += 1
+        params = [snapshot_type.value, [item.__dict__ for item in list_items]]
+        snapshot_msg = ParamsMessage(id=msg_counter, jsonrpc="2.0", method=WSMsgType.snapshot.value, params=params)
+        bytes_msg = self.__message_converter.serialise_message(snapshot_msg)
+
+        set_subscribers = self.__subscribed_clients.get(snapshot_type, set())
+        for subscriber in set_subscribers:
+            subscriber.send_msg(bytes_msg)
+
+    def send_store_snapshot(self):
+        self.send_specific_snapshot(self.__stores_counter, DBType.stores, self.db_connect.get_stores())
+
+    def send_product_snapshot(self):
+        self.send_specific_snapshot(self.__products_counter, DBType.products, self.db_connect.get_products())
+
+    def send_payments_made_snapshot(self):
+        self.send_specific_snapshot(self.__payments_made_counter, DBType.paymentMade, self.db_connect.get_payments_made())
+
+    def send_refunds_made_snapshot(self):
+        self.send_specific_snapshot(self.__refunds_made_counter, DBType.refundMade, self.db_connect.get_refunds_made())
 
 
 if __name__ == '__main__':
