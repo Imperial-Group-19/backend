@@ -2,9 +2,10 @@
 # parameters as a dictionary. This function will be imported in to the main python script:
 # Not used
 
-#!/usr/bin/python
+# !/usr/bin/python
 from funnel_backend.configparser import ConfigParser
- 
+
+
 def config(filename='database.ini', section='postgresql'):
     # create a parser
     parser = ConfigParser()
