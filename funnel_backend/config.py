@@ -3,7 +3,7 @@
 # Not used
 
 # !/usr/bin/python
-from funnel_backend.configparser import ConfigParser
+from configparser import ConfigParser
 
 
 def config(filename='database.ini', section='postgresql'):
