@@ -3,7 +3,7 @@ import time
 
 # core infra
 setuptools.setup(
-    name='src',
+    name='funnel_backend',
     version="0.0" + str(time.time()),
     packages=setuptools.find_packages(),
     url='',

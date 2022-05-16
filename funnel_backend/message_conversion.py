@@ -1,6 +1,7 @@
 import ujson
-from message_protocol import MessageBase, Subscription, ResponseMessage, ErrorMessage, Update, WSMsgType, ParamsMessage, DBType
-from db_objects import Product
+
+from funnel_backend.message_protocol import MessageBase, Subscription, ResponseMessage, ErrorMessage, Update, WSMsgType, ParamsMessage, DBType
+from funnel_backend.db_objects import Product
 
 class MessageConverter:
     msg_mappings = {

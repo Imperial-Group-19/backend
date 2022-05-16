@@ -16,4 +16,4 @@ pip uninstall -y src
 # build the setup wheel
 python setup.py bdist_wheel
 
-python -m pip install src --ignore-installed --find-links=dist/
+python -m pip install funnel_backend --ignore-installed --find-links=dist/

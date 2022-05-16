@@ -11,8 +11,8 @@ from web3._utils.filters import construct_event_filter_params
 from web3._utils.rpc_abi import RPC
 from web3.contract import ContractEvent, Contract
 
-from db_objects import FunnelContractEvent
-from https_connection import HTTPSConnection
+from funnel_backend.db_objects import FunnelContractEvent
+from funnel_backend.https_connection import HTTPSConnection
 
 
 class PolygonNodeClient:

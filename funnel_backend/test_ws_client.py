@@ -6,9 +6,9 @@ import asyncio
 from autobahn.asyncio.websocket import WebSocketClientProtocol, \
     WebSocketClientFactory
 
-from db_objects import Product, Store
-from message_conversion import MessageConverter
-from message_protocol import Subscription, DBType, ResponseMessage, WSMsgType, Update
+from funnel_backend.db_objects import Product, Store
+from funnel_backend.message_conversion import MessageConverter
+from funnel_backend.message_protocol import Subscription, DBType, ResponseMessage, WSMsgType, Update
 
 
 class MyClientProtocol(WebSocketClientProtocol):

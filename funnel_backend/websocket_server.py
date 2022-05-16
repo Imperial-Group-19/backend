@@ -14,13 +14,13 @@ from autobahn.asyncio.websocket import WebSocketServerProtocol, WebSocketServerF
 from autobahn.websocket.protocol import ConnectionRequest, WebSocketProtocol
 from sshtunnel import SSHTunnelForwarder
 
-from db_connection import postgresDBClient
-from db_objects import Store, Product, ALLOWED_EVENTS, FunnelContractEvent, StoreCreated, StoreRemoved, StoreUpdated, \
+from funnel_backend.db_connection import postgresDBClient
+from funnel_backend.db_objects import Store, Product, ALLOWED_EVENTS, FunnelContractEvent, StoreCreated, StoreRemoved, StoreUpdated, \
     PaymentMade, RefundMade, ProductCreated, ProductRemoved, ProductUpdated
-from message_conversion import MessageConverter
-from message_protocol import Subscription, MessageBase, DBType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, \
+from funnel_backend.message_conversion import MessageConverter
+from funnel_backend.message_protocol import Subscription, MessageBase, DBType, ErrorMessage, ErrorType, ResponseMessage, ParamsMessage, \
     WSMsgType, Update
-from polygon_node_connection import PolygonNodeClient
+from funnel_backend.polygon_node_connection import PolygonNodeClient
 
 
 class WebSocketServer(WebSocketServerFactory):

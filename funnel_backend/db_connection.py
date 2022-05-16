@@ -3,7 +3,7 @@ from typing import Dict, List
 
 import psycopg2
 
-from db_objects import Store, Product, Affiliate, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, \
+from funnel_backend.db_objects import Store, Product, Affiliate, StoreCreated, StoreRemoved, StoreUpdated, PaymentMade, RefundMade, \
     ProductCreated, ProductRemoved, ProductUpdated, AffiliateRegistered, OwnershipTransferred
 
 
