@@ -49,6 +49,7 @@ class Product:
     price: int
     features: List[str]
     productType: int
+    productLink: str = ""
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, Product):
