@@ -95,7 +95,7 @@ class WebSocketServer(WebSocketServerFactory):
                                                            https_url="https://rpc-mumbai.maticvigil.com",
                                                            contract_address="0xEC21fd26fcB7F61cbeF9038BA7E59AF60C13e77c",
                                                            contract_abi_file="funnel_abi.json",
-                                                           start_block=26350663)
+                                                           start_block=26350665)
 
         self.__polygon_node_connection.register_event_callback("ws_server", self.process_contract_events)
 
