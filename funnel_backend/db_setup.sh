@@ -21,10 +21,10 @@ CREATE DATABASE salesfunnel;
 CREATE TABLE PaymentMade(
 block_hash TEXT NOT NULL,
 transaction_hash TEXT NOT NULL,
-block_number INT NOT NULL,
+block_number BIGINT NOT NULL,
 address TEXT NOT NULL, 
 data TEXT NOT NULL,
-transaction_idx INT NOT NULL,
+transaction_idx BIGINT NOT NULL,
 customer TEXT NOT NULL,
 storeAddress TEXT NOT NULL,
 productNames TEXT[]);
@@ -32,10 +32,10 @@ productNames TEXT[]);
 CREATE TABLE RefundMade(
 block_hash TEXT NOT NULL,
 transaction_hash TEXT NOT NULL,
-block_number INT NOT NULL,
+block_number BIGINT NOT NULL,
 address TEXT NOT NULL, 
 data TEXT NOT NULL,
-transaction_idx INT NOT NULL,
+transaction_idx BIGINT NOT NULL,
 customer TEXT NOT NULL,
 storeAddress TEXT NOT NULL,
 productNames TEXT[]);
@@ -44,22 +44,22 @@ productNames TEXT[]);
 CREATE TABLE ProductCreated(
 block_hash TEXT NOT NULL,
 transaction_hash TEXT NOT NULL,
-block_number INT NOT NULL,
+block_number BIGINT NOT NULL,
 address TEXT NOT NULL, 
 data TEXT NOT NULL,
-transaction_idx INT NOT NULL,
+transaction_idx BIGINT NOT NULL,
 storeAddress TEXT NOT NULL,
 productName TEXT NOT NULL,
-productType INT NOT NULL,
+productType BIGINT NOT NULL,
 price BIGINT NOT NULL);
 
 CREATE TABLE ProductRemoved(
 block_hash TEXT NOT NULL,
 transaction_hash TEXT NOT NULL,
-block_number INT NOT NULL,
+block_number BIGINT NOT NULL,
 address TEXT NOT NULL, 
 data TEXT NOT NULL,
-transaction_idx INT NOT NULL,
+transaction_idx BIGINT NOT NULL,
 storeAddress TEXT NOT NULL,
 productName TEXT NOT NULL);
 
@@ -67,42 +67,41 @@ productName TEXT NOT NULL);
 CREATE TABLE ProductUpdated(
 block_hash TEXT NOT NULL,
 transaction_hash TEXT NOT NULL,
-block_number INT NOT NULL,
+block_number BIGINT NOT NULL,
 address TEXT NOT NULL, 
 data TEXT NOT NULL,
-transaction_idx INT NOT NULL,
+transaction_idx BIGINT NOT NULL,
 storeAddress TEXT NOT NULL,
 productName TEXT NOT NULL,
-newPrice INT);
+newPrice BIGINT NOT NULL);
 
 CREATE TABLE StoreCreated(
 block_hash TEXT NOT NULL,
 transaction_hash TEXT NOT NULL,
-block_number INT NOT NULL,
+block_number BIGINT NOT NULL,
 address TEXT NOT NULL, 
 data TEXT NOT NULL,
-transaction_idx INT NOT NULL,
+transaction_idx BIGINT NOT NULL,
 storeAddress TEXT NOT NULL,
-storeOwner TEXT NOT NULL)
-;
+storeOwner TEXT NOT NULL);
 
 CREATE TABLE StoreRemoved(
 block_hash TEXT NOT NULL,
 transaction_hash TEXT NOT NULL,
-block_number INT NOT NULL,
+block_number BIGINT NOT NULL,
 address TEXT NOT NULL, 
 data TEXT NOT NULL,
-transaction_idx INT NOT NULL,
+transaction_idx BIGINT NOT NULL,
 storeAddress TEXT NOT NULL);
 
 
 CREATE TABLE StoreUpdated(
 block_hash TEXT NOT NULL,
 transaction_hash TEXT NOT NULL,
-block_number INT NOT NULL,
+block_number BIGINT NOT NULL,
 address TEXT NOT NULL, 
 data TEXT NOT NULL,
-transaction_idx INT NOT NULL,
+transaction_idx BIGINT NOT NULL,
 storeAddress TEXT NOT NULL,
 newStoreAddress TEXT NOT NULL);
 
@@ -120,7 +119,7 @@ title TEXT,
 description TEXT,
 price BIGINT NOT NULL,
 features TEXT[],
-product_type INT NOT NULL,
+product_type BIGINT NOT NULL,
 PRIMARY KEY (product_id, store_id),
 FOREIGN KEY (store_id)
 REFERENCES stores(id));
@@ -128,10 +127,10 @@ REFERENCES stores(id));
 CREATE TABLE AffiliateRegistered(
 block_hash TEXT NOT NULL,
 transaction_hash TEXT NOT NULL,
-block_number INT NOT NULL,
+block_number BIGINT NOT NULL,
 address TEXT NOT NULL, 
 data TEXT NOT NULL,
-transaction_idx INT NOT NULL,
+transaction_idx BIGINT NOT NULL,
 storeAddress TEXT NOT NULL,
 affiliateAddress TEXT NOT NULL);
 
@@ -142,10 +141,10 @@ PRIMARY KEY (affiliateAddress));
 CREATE TABLE OwnershipTransferred(
 block_hash TEXT NOT NULL,
 transaction_hash TEXT NOT NULL,
-block_number INT NOT NULL,
+block_number BIGINT NOT NULL,
 address TEXT NOT NULL, 
 data TEXT NOT NULL,
-transaction_idx INT NOT NULL,
+transaction_idx BIGINT NOT NULL,
 previousOwner TEXT NOT NULL,
 newOwner TEXT NOT NULL);
 

@@ -366,7 +366,7 @@ if __name__ == '__main__':
         server.start()
 
     log_file = os.path.join(args.log_dir, "middle-tier-service.log")
-    logging.basicConfig(filename=log_file, level=logging.DEBUG)
+    logging.basicConfig(filename=log_file, level=logging.DEBUG, format='%(asctime)s [%(levelname)s]: %(message)s')
 
     loop = asyncio.get_event_loop()
     ws_server = WebSocketServer(port=args.port, logging=logging)
