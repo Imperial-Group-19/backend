@@ -64,7 +64,7 @@ class Product:
         if isinstance(self.features, str):
             self.features = [self.features]
 
-        elif isinstance(self.features, list) and len(self.features) == 1 and isinstance(self.features[1], list):
+        elif isinstance(self.features, list) and len(self.features) == 1 and isinstance(self.features[0], list):
             self.features = [val for sublist in self.features for val in sublist]
 
 
