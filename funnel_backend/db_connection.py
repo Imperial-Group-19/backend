@@ -111,7 +111,7 @@ class postgresDBClient:
 
             return title, description
 
-    def get_products_db(self, product_id, store_id, dynamic = False):
+    def get_products_db(self, product_id, store_id, dynamic=False):
         # Query
         if not dynamic:
             self.cursor.execute("SELECT product_id, store_id, title, description, price, features, product_type FROM products WHERE product_id = %s AND store_id = %s", (product_id, store_id))
@@ -129,9 +129,9 @@ class postgresDBClient:
             self.logging.info(f"{self.cursor.rowcount} dynamic fields of product retrieved", )
 
             row = self.cursor.fetchone()
-            (title, description, features) = row
+            (title, description, features, product_type) = row
 
-            return title, description, features
+            return title, description, features, product_type
 
     def get_affiliates_db(self, affiliate_address, dynamic = False):
         # Query
@@ -476,7 +476,7 @@ class postgresDBClient:
             self.logging.info(f"{product_update.productName} id: updated product exists")
 
         elif self.check_products(product_update):
-            existing_title, existing_description, existing_features = self.get_products_db(product_update.productName, product_update.storeAddress, dynamic = True)
+            existing_title, existing_description, existing_features, existing_product_type = self.get_products_db(product_update.productName, product_update.storeAddress, dynamic=True)
             
             # Create new product
             new_product = Product(
@@ -486,7 +486,7 @@ class postgresDBClient:
                 description=existing_description,
                 price=product_update.newPrice,
                 features=existing_features,
-                productType=0
+                productType=existing_product_type
             )
 
             # Remove old product from dictionary and DB and add new product
