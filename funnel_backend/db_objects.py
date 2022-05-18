@@ -60,6 +60,13 @@ class Product:
     def __hash__(self) -> int:
         return hash(self.productName) ^ hash(self.storeAddress) ^ hash(self.productType)
 
+    def __post_init__(self):
+        if isinstance(self.features, str):
+            self.features = [self.features]
+
+        elif isinstance(self.features, list) and len(self.features) == 1 and isinstance(self.features[1], list):
+            self.features = [val for sublist in self.features for val in sublist]
+
 
 @dataclass(init=True, repr=True)
 class Affiliate:
